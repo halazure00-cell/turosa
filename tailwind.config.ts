@@ -26,6 +26,9 @@ const config: Config = {
           dark: '#4E342E',
         },
       },
+      fontFamily: {
+        sans: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+      },
     },
   },
   plugins: [],
