@@ -10,6 +10,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
   const [book, setBook] = useState<Book | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [imageError, setImageError] = useState(false)
 
   useEffect(() => {
     fetchBookDetails()
@@ -143,10 +144,12 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
             <div className="md:flex">
               {/* Cover Image */}
               <div className="md:w-1/3 bg-gray-200 flex items-center justify-center p-8">
-                {book.cover_image_url ? (
+                {book.cover_image_url && !imageError ? (
                   <img
                     src={book.cover_image_url}
                     alt={book.title}
+                    loading="lazy"
+                    onError={() => setImageError(true)}
                     className="w-full h-auto rounded-lg shadow-md"
                   />
                 ) : (

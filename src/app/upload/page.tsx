@@ -90,12 +90,16 @@ export default function UploadPage() {
         throw new Error(`Gagal upload PDF: ${pdfError.message}`)
       }
 
-      // Get authenticated URL for PDF (since it's private)
-      const { data: { publicUrl: pdfPublicUrl } } = supabase.storage
+      // Get signed URL for PDF (since it's private) - valid for 1 year
+      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
         .from('book-files')
-        .getPublicUrl(pdfFileName)
+        .createSignedUrl(pdfFileName, 31536000) // 1 year in seconds
       
-      pdfUrl = pdfPublicUrl
+      if (signedUrlError) {
+        throw new Error(`Gagal membuat URL PDF: ${signedUrlError.message}`)
+      }
+
+      pdfUrl = signedUrlData.signedUrl
 
       // Insert book metadata into database
       const { error: dbError } = await supabase
@@ -300,7 +304,7 @@ export default function UploadPage() {
             disabled={isLoading}
             className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? 'Uploading...' : 'Upload Kitab'}
+            {isLoading ? 'Mengupload...' : 'Upload Kitab'}
           </button>
         </form>
       </div>

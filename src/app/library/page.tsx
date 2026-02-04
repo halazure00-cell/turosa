@@ -125,6 +125,7 @@ export default function LibraryPage() {
                       <img
                         src={book.cover_image_url}
                         alt={book.title}
+                        loading="lazy"
                         className="w-full h-full object-cover"
                       />
                     ) : (
