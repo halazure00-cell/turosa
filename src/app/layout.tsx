@@ -1,12 +1,5 @@
 import type { Metadata } from 'next'
-import { Amiri } from 'next/font/google'
 import './globals.css'
-
-const amiri = Amiri({ 
-  weight: ['400', '700'],
-  subsets: ['arabic', 'latin'],
-  variable: '--font-amiri',
-})
 
 export const metadata: Metadata = {
   title: 'Turosa - Kitab Learning App',
@@ -23,9 +16,9 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet" />
       </head>
-      <body className={`${amiri.variable} font-sans bg-secondary antialiased`}>
+      <body className="font-sans bg-secondary antialiased">
         {children}
       </body>
     </html>
