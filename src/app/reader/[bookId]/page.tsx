@@ -1,21 +1,23 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { BookOpen, Download, Eye, ArrowLeft } from 'lucide-react'
+import { BookOpen, Download, Eye, ArrowLeft, ScanText } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { Book } from '@/types/database'
+import { Book, Chapter } from '@/types/database'
 import Link from 'next/link'
 import { use } from 'react'
 
 export default function ReaderPage({ params }: { params: Promise<{ bookId: string }> }) {
   const { bookId } = use(params)
   const [book, setBook] = useState<Book | null>(null)
+  const [chapters, setChapters] = useState<Chapter[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [imageError, setImageError] = useState(false)
 
   useEffect(() => {
     fetchBookDetails()
+    fetchChapters()
   }, [bookId])
 
   const fetchBookDetails = async () => {
@@ -38,6 +40,25 @@ export default function ReaderPage({ params }: { params: Promise<{ bookId: strin
       setError(err.message || 'Gagal memuat detail kitab')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchChapters = async () => {
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('chapters')
+        .select('*')
+        .eq('book_id', bookId)
+        .order('order_index', { ascending: true })
+
+      if (fetchError) {
+        console.error('Error fetching chapters:', fetchError)
+        return
+      }
+
+      setChapters(data || [])
+    } catch (err: any) {
+      console.error('Error fetching chapters:', err)
     }
   }
 
@@ -230,6 +251,64 @@ export default function ReaderPage({ params }: { params: Promise<{ bookId: strin
               <strong>Catatan:</strong> Fitur pembaca PDF interaktif akan tersedia di versi mendatang. 
               Untuk saat ini, gunakan tombol "Lihat PDF" atau "Download" untuk membaca kitab.
             </p>
+          </div>
+
+          {/* Digitization Section */}
+          <div className="mt-8 bg-white rounded-lg shadow-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-accent">Digitalisasi Kitab</h2>
+              <Link
+                href={`/digitize/${bookId}`}
+                className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors"
+              >
+                <ScanText className="w-5 h-5" />
+                Digitalisasi Kitab Ini
+              </Link>
+            </div>
+
+            {/* Chapters List */}
+            {chapters.length > 0 ? (
+              <div className="space-y-3">
+                <p className="text-sm text-gray-600 mb-4">
+                  Bab-bab yang telah didigitalisasi ({chapters.length} bab):
+                </p>
+                {chapters.map((chapter, index) => (
+                  <div
+                    key={chapter.id}
+                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-medium text-primary">
+                            Bab {chapter.order_index}
+                          </span>
+                        </div>
+                        <h3 className="font-semibold text-accent mb-2">
+                          {chapter.title}
+                        </h3>
+                        {chapter.content && (
+                          <p className="text-sm text-gray-600 line-clamp-2" style={{ direction: 'rtl' }}>
+                            {chapter.content}
+                          </p>
+                        )}
+                      </div>
+                      <BookOpen className="w-5 h-5 text-gray-400 ml-4" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 bg-gray-50 rounded-lg">
+                <ScanText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-600 mb-2">
+                  Belum ada bab yang didigitalisasi
+                </p>
+                <p className="text-sm text-gray-500">
+                  Klik tombol "Digitalisasi Kitab Ini" untuk memulai
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
