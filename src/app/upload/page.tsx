@@ -3,6 +3,7 @@
 import { useState, useRef, ChangeEvent, FormEvent } from 'react'
 import { Upload as UploadIcon, FileText, Image, AlertCircle, CheckCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
 
 export default function UploadPage() {
   const [title, setTitle] = useState('')
@@ -37,12 +38,16 @@ export default function UploadPage() {
 
     // Validation
     if (!title.trim()) {
-      setError('Judul kitab harus diisi')
+      const errorMsg = 'Judul kitab harus diisi'
+      setError(errorMsg)
+      toast.error(errorMsg)
       return
     }
 
     if (!pdfFile) {
-      setError('File PDF kitab harus dipilih')
+      const errorMsg = 'File PDF kitab harus dipilih'
+      setError(errorMsg)
+      toast.error(errorMsg)
       return
     }
 
@@ -53,7 +58,9 @@ export default function UploadPage() {
       const { data: { user } } = await supabase.auth.getUser()
       
       if (!user) {
-        setError('Anda harus login terlebih dahulu')
+        const errorMsg = 'Anda harus login terlebih dahulu'
+        setError(errorMsg)
+        toast.error(errorMsg)
         setIsLoading(false)
         return
       }
@@ -120,6 +127,7 @@ export default function UploadPage() {
 
       // Success
       setUploadSuccess(true)
+      toast.success('Upload berhasil! Kitab telah ditambahkan ke perpustakaan.')
       
       // Reset form
       setTitle('')
@@ -132,7 +140,9 @@ export default function UploadPage() {
       if (pdfInputRef.current) pdfInputRef.current.value = ''
 
     } catch (err: any) {
-      setError(err.message || 'Terjadi kesalahan saat upload')
+      const errorMessage = err.message || 'Terjadi kesalahan saat upload'
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setIsLoading(false)
     }

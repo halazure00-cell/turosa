@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
   title: 'Turosa - Kitab Learning App',
@@ -20,6 +21,7 @@ export default function RootLayout({
       </head>
       <body className="font-sans bg-secondary antialiased">
         {children}
+        <Toaster position="top-right" richColors />
       </body>
     </html>
   )

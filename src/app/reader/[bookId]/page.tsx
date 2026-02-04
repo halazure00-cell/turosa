@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { Book, Chapter } from '@/types/database'
 import Link from 'next/link'
 import { use } from 'react'
+import { toast } from 'sonner'
 
 export default function ReaderPage({ params }: { params: Promise<{ bookId: string }> }) {
   const { bookId } = use(params)
@@ -68,8 +69,9 @@ export default function ReaderPage({ params }: { params: Promise<{ bookId: strin
     try {
       // Open PDF in new tab for download
       window.open(book.pdf_url, '_blank')
+      toast.success('PDF sedang diunduh...')
     } catch (err: any) {
-      alert('Gagal mengunduh file: ' + err.message)
+      toast.error('Gagal mengunduh file: ' + err.message)
     }
   }
 
@@ -79,8 +81,9 @@ export default function ReaderPage({ params }: { params: Promise<{ bookId: strin
     try {
       // Open PDF in new tab for viewing
       window.open(book.pdf_url, '_blank')
+      toast.success('Membuka PDF...')
     } catch (err: any) {
-      alert('Gagal membuka file: ' + err.message)
+      toast.error('Gagal membuka file: ' + err.message)
     }
   }
 

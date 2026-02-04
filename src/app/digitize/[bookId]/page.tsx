@@ -15,6 +15,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { Book, Chapter } from '@/types/database'
 import Link from 'next/link'
+import { toast } from 'sonner'
 
 export default function DigitizePage({
   params,
@@ -146,12 +147,12 @@ export default function DigitizePage({
 
   const handleSaveChapter = async () => {
     if (!chapterTitle.trim()) {
-      alert('Silakan masukkan judul bab')
+      toast.error('Silakan masukkan judul bab')
       return
     }
 
     if (!ocrText.trim()) {
-      alert('Tidak ada teks untuk disimpan')
+      toast.error('Tidak ada teks untuk disimpan')
       return
     }
 
@@ -193,6 +194,7 @@ export default function DigitizePage({
       }
 
       setSaveSuccess(true)
+      toast.success('Bab berhasil disimpan!')
       
       // Reset form
       setTimeout(() => {
@@ -203,7 +205,7 @@ export default function DigitizePage({
         setSaveSuccess(false)
       }, 2000)
     } catch (err: any) {
-      alert('Gagal menyimpan bab: ' + err.message)
+      toast.error('Gagal menyimpan bab: ' + err.message)
     } finally {
       setIsSaving(false)
     }
