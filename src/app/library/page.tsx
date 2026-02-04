@@ -22,6 +22,13 @@ export default function LibraryPage() {
   }, [currentPage])
 
   useEffect(() => {
+    // Reset to page 1 when search query changes
+    if (searchQuery.trim() !== '') {
+      setCurrentPage(1)
+    }
+  }, [searchQuery])
+
+  useEffect(() => {
     // Filter books based on search query
     if (searchQuery.trim() === '') {
       setFilteredBooks(books)
