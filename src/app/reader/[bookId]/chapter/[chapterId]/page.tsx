@@ -7,6 +7,7 @@ import { saveProgress, markAsCompleted, getChapterProgress } from '@/lib/progres
 import { Book, Chapter } from '@/types/database'
 import Link from 'next/link'
 import { use } from 'react'
+import AIChatSidebar from '@/components/AIChatSidebar'
 
 export default function ChapterReaderPage({ 
   params 
@@ -274,6 +275,14 @@ export default function ChapterReaderPage({
           )}
         </div>
       </div>
+
+      {/* AI Chat Sidebar */}
+      {chapter && chapter.content && (
+        <AIChatSidebar
+          chapterContent={chapter.content}
+          chapterTitle={`${book?.title} - Bab ${chapter.order_index}: ${chapter.title}`}
+        />
+      )}
     </div>
   )
 }
