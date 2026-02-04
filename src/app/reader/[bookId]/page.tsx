@@ -5,8 +5,10 @@ import { BookOpen, Download, Eye, ArrowLeft } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Book } from '@/types/database'
 import Link from 'next/link'
+import { use } from 'react'
 
-export default function ReaderPage({ params }: { params: { bookId: string } }) {
+export default function ReaderPage({ params }: { params: Promise<{ bookId: string }> }) {
+  const { bookId } = use(params)
   const [book, setBook] = useState<Book | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
@@ -14,7 +16,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
 
   useEffect(() => {
     fetchBookDetails()
-  }, [params.bookId])
+  }, [bookId])
 
   const fetchBookDetails = async () => {
     setIsLoading(true)
@@ -24,7 +26,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
       const { data, error: fetchError } = await supabase
         .from('books')
         .select('*')
-        .eq('id', params.bookId)
+        .eq('id', bookId)
         .single()
 
       if (fetchError) {
