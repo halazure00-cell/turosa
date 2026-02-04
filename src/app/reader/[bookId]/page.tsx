@@ -273,9 +273,10 @@ export default function ReaderPage({ params }: { params: Promise<{ bookId: strin
                   Bab-bab yang telah didigitalisasi ({chapters.length} bab):
                 </p>
                 {chapters.map((chapter, index) => (
-                  <div
+                  <Link
                     key={chapter.id}
-                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                    href={`/reader/${bookId}/chapter/${chapter.id}`}
+                    className="block border border-gray-200 rounded-lg p-4 hover:bg-gray-50 hover:border-primary transition-colors"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -295,7 +296,7 @@ export default function ReaderPage({ params }: { params: Promise<{ bookId: strin
                       </div>
                       <BookOpen className="w-5 h-5 text-gray-400 ml-4" />
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             ) : (
