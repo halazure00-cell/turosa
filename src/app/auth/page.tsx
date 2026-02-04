@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { signIn, signUp } from '@/lib/supabase'
+import { toast } from 'sonner'
 
 export default function AuthPage() {
   const router = useRouter()
@@ -25,11 +26,19 @@ export default function AuthPage() {
 
       if (authError) {
         setError(authError.message)
+        toast.error(authError.message)
       } else if (data) {
+        toast.success(
+          isSignUp 
+            ? 'Akun berhasil dibuat! Selamat datang di Turosa' 
+            : 'Login berhasil! Selamat datang kembali'
+        )
         router.push('/dashboard')
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred'
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }

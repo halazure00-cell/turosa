@@ -8,6 +8,7 @@ import { Book, Chapter } from '@/types/database'
 import Link from 'next/link'
 import { use } from 'react'
 import AIChatSidebar from '@/components/AIChatSidebar'
+import { toast } from 'sonner'
 
 export default function ChapterReaderPage({ 
   params 
@@ -96,7 +97,7 @@ export default function ChapterReaderPage({
 
   const handleMarkComplete = async () => {
     if (!currentUser) {
-      alert('Silakan login terlebih dahulu')
+      toast.error('Silakan login terlebih dahulu')
       return
     }
 
@@ -106,9 +107,9 @@ export default function ChapterReaderPage({
       if (error) throw error
       
       setIsCompleted(true)
-      alert('Bab ditandai selesai!')
+      toast.success('Bab ditandai selesai!')
     } catch (err: any) {
-      alert('Gagal menandai selesai: ' + err.message)
+      toast.error('Gagal menandai selesai: ' + err.message)
     } finally {
       setIsMarkingComplete(false)
     }

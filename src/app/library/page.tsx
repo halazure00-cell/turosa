@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { BookOpen, Search, Filter } from 'lucide-react'
+import { BookOpen, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Book } from '@/types/database'
 import Link from 'next/link'
+
+const BOOKS_PER_PAGE = 12
 
 export default function LibraryPage() {
   const [books, setBooks] = useState<Book[]>([])
@@ -12,10 +14,12 @@ export default function LibraryPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
 
   useEffect(() => {
     fetchBooks()
-  }, [])
+  }, [currentPage])
 
   useEffect(() => {
     // Filter books based on search query
@@ -37,10 +41,22 @@ export default function LibraryPage() {
     setError('')
 
     try {
+      // Get total count
+      const { count } = await supabase
+        .from('books')
+        .select('*', { count: 'exact', head: true })
+
+      setTotalCount(count || 0)
+
+      // Fetch books with pagination
+      const start = (currentPage - 1) * BOOKS_PER_PAGE
+      const end = start + BOOKS_PER_PAGE - 1
+
       const { data, error: fetchError } = await supabase
         .from('books')
         .select('*')
         .order('created_at', { ascending: false })
+        .range(start, end)
 
       if (fetchError) {
         throw new Error(fetchError.message)
@@ -54,6 +70,10 @@ export default function LibraryPage() {
       setIsLoading(false)
     }
   }
+
+  const totalPages = Math.ceil(totalCount / BOOKS_PER_PAGE)
+  const canGoPrevious = currentPage > 1
+  const canGoNext = currentPage < totalPages
 
   return (
     <div className="min-h-screen bg-secondary">
@@ -97,65 +117,96 @@ export default function LibraryPage() {
 
         {/* Book Grid */}
         {!isLoading && !error && (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredBooks.length === 0 ? (
-              <div className="bg-white p-6 rounded-lg shadow-lg text-center col-span-full">
-                <div className="text-primary mb-4 flex justify-center">
-                  <BookOpen className="w-16 h-16" />
+          <>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredBooks.length === 0 ? (
+                <div className="bg-white p-6 rounded-lg shadow-lg text-center col-span-full">
+                  <div className="text-primary mb-4 flex justify-center">
+                    <BookOpen className="w-16 h-16" />
+                  </div>
+                  <h3 className="text-lg font-bold text-accent mb-2">
+                    {searchQuery ? 'Tidak Ada Hasil' : 'Koleksi Kosong'}
+                  </h3>
+                  <p className="text-gray-600 text-sm">
+                    {searchQuery 
+                      ? `Tidak ada kitab yang cocok dengan pencarian "${searchQuery}"`
+                      : 'Belum ada kitab yang tersedia. Silakan upload kitab pertama Anda!'}
+                  </p>
                 </div>
-                <h3 className="text-lg font-bold text-accent mb-2">
-                  {searchQuery ? 'Tidak Ada Hasil' : 'Koleksi Kosong'}
-                </h3>
-                <p className="text-gray-600 text-sm">
-                  {searchQuery 
-                    ? `Tidak ada kitab yang cocok dengan pencarian "${searchQuery}"`
-                    : 'Belum ada kitab yang tersedia. Silakan upload kitab pertama Anda!'}
-                </p>
-              </div>
-            ) : (
-              filteredBooks.map((book) => (
-                <Link
-                  key={book.id}
-                  href={`/reader/${book.id}`}
-                  className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
-                >
-                  {/* Book Cover */}
-                  <div className="relative h-64 bg-gray-200 flex items-center justify-center">
-                    {book.cover_image_url ? (
-                      <img
-                        src={book.cover_image_url}
-                        alt={book.title}
-                        loading="lazy"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <BookOpen className="w-20 h-20 text-gray-400" />
-                    )}
-                  </div>
+              ) : (
+                filteredBooks.map((book) => (
+                  <Link
+                    key={book.id}
+                    href={`/reader/${book.id}`}
+                    className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
+                  >
+                    {/* Book Cover */}
+                    <div className="relative h-64 bg-gray-200 flex items-center justify-center">
+                      {book.cover_image_url ? (
+                        <img
+                          src={book.cover_image_url}
+                          alt={book.title}
+                          loading="lazy"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <BookOpen className="w-20 h-20 text-gray-400" />
+                      )}
+                    </div>
 
-                  {/* Book Info */}
-                  <div className="p-4">
-                    <h3 className="font-bold text-accent mb-1 line-clamp-2">
-                      {book.title}
-                    </h3>
-                    {book.author && (
-                      <p className="text-sm text-gray-600 mb-2">{book.author}</p>
-                    )}
-                    {book.category && (
-                      <span className="inline-block bg-primary text-white text-xs px-2 py-1 rounded">
-                        {book.category}
-                      </span>
-                    )}
-                    {book.description && (
-                      <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-                        {book.description}
-                      </p>
-                    )}
-                  </div>
-                </Link>
-              ))
+                    {/* Book Info */}
+                    <div className="p-4">
+                      <h3 className="font-bold text-accent mb-1 line-clamp-2">
+                        {book.title}
+                      </h3>
+                      {book.author && (
+                        <p className="text-sm text-gray-600 mb-2">{book.author}</p>
+                      )}
+                      {book.category && (
+                        <span className="inline-block bg-primary text-white text-xs px-2 py-1 rounded">
+                          {book.category}
+                        </span>
+                      )}
+                      {book.description && (
+                        <p className="text-sm text-gray-600 mt-2 line-clamp-2">
+                          {book.description}
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+                ))
+              )}
+            </div>
+
+            {/* Pagination */}
+            {!searchQuery && totalPages > 1 && (
+              <div className="mt-8 flex items-center justify-center gap-4">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={!canGoPrevious}
+                  className="flex items-center gap-2 px-6 py-3 bg-white rounded-lg shadow-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium text-accent"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                  Sebelumnya
+                </button>
+                
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-600">
+                    Halaman <span className="font-bold text-primary">{currentPage}</span> dari <span className="font-bold">{totalPages}</span>
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={!canGoNext}
+                  className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg shadow-md hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                >
+                  Selanjutnya
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
             )}
-          </div>
+          </>
         )}
       </div>
     </div>
