@@ -1,6 +1,139 @@
-import { Upload as UploadIcon, FileText, Image, AlertCircle } from 'lucide-react'
+'use client'
+
+import { useState, useRef, ChangeEvent, FormEvent } from 'react'
+import { Upload as UploadIcon, FileText, Image, AlertCircle, CheckCircle } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 export default function UploadPage() {
+  const [title, setTitle] = useState('')
+  const [author, setAuthor] = useState('')
+  const [category, setCategory] = useState('')
+  const [description, setDescription] = useState('')
+  const [coverFile, setCoverFile] = useState<File | null>(null)
+  const [pdfFile, setPdfFile] = useState<File | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [uploadSuccess, setUploadSuccess] = useState(false)
+  const [error, setError] = useState('')
+
+  const coverInputRef = useRef<HTMLInputElement>(null)
+  const pdfInputRef = useRef<HTMLInputElement>(null)
+
+  const handleCoverChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setCoverFile(e.target.files[0])
+    }
+  }
+
+  const handlePdfChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setPdfFile(e.target.files[0])
+    }
+  }
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setUploadSuccess(false)
+
+    // Validation
+    if (!title.trim()) {
+      setError('Judul kitab harus diisi')
+      return
+    }
+
+    if (!pdfFile) {
+      setError('File PDF kitab harus dipilih')
+      return
+    }
+
+    setIsLoading(true)
+
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        setError('Anda harus login terlebih dahulu')
+        setIsLoading(false)
+        return
+      }
+
+      let coverImageUrl = null
+      let pdfUrl = null
+
+      // Upload cover image if provided
+      if (coverFile) {
+        const coverFileName = `${Date.now()}_${coverFile.name}`
+        const { data: coverData, error: coverError } = await supabase.storage
+          .from('book-covers')
+          .upload(coverFileName, coverFile)
+
+        if (coverError) {
+          throw new Error(`Gagal upload cover: ${coverError.message}`)
+        }
+
+        // Get public URL for cover
+        const { data: { publicUrl } } = supabase.storage
+          .from('book-covers')
+          .getPublicUrl(coverFileName)
+        
+        coverImageUrl = publicUrl
+      }
+
+      // Upload PDF file
+      const pdfFileName = `${Date.now()}_${pdfFile.name}`
+      const { data: pdfData, error: pdfError } = await supabase.storage
+        .from('book-files')
+        .upload(pdfFileName, pdfFile)
+
+      if (pdfError) {
+        throw new Error(`Gagal upload PDF: ${pdfError.message}`)
+      }
+
+      // Get authenticated URL for PDF (since it's private)
+      const { data: { publicUrl: pdfPublicUrl } } = supabase.storage
+        .from('book-files')
+        .getPublicUrl(pdfFileName)
+      
+      pdfUrl = pdfPublicUrl
+
+      // Insert book metadata into database
+      const { error: dbError } = await supabase
+        .from('books')
+        .insert({
+          title: title.trim(),
+          author: author.trim() || null,
+          description: description.trim() || null,
+          category: category || null,
+          pdf_url: pdfUrl,
+          cover_image_url: coverImageUrl,
+          uploader_id: user.id
+        })
+
+      if (dbError) {
+        throw new Error(`Gagal menyimpan data: ${dbError.message}`)
+      }
+
+      // Success
+      setUploadSuccess(true)
+      
+      // Reset form
+      setTitle('')
+      setAuthor('')
+      setCategory('')
+      setDescription('')
+      setCoverFile(null)
+      setPdfFile(null)
+      if (coverInputRef.current) coverInputRef.current.value = ''
+      if (pdfInputRef.current) pdfInputRef.current.value = ''
+
+    } catch (err: any) {
+      setError(err.message || 'Terjadi kesalahan saat upload')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-secondary">
       <div className="container mx-auto px-4 py-8">
@@ -11,20 +144,74 @@ export default function UploadPage() {
           </p>
         </div>
 
-        <div className="max-w-3xl mx-auto">
-          {/* Upload Area */}
+        <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+          {/* Success Message */}
+          {uploadSuccess && (
+            <div className="bg-green-50 border border-green-200 p-4 rounded-lg mb-6 flex gap-3">
+              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-green-800">
+                <p className="font-medium">Upload berhasil! Kitab telah ditambahkan ke perpustakaan.</p>
+              </div>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 p-4 rounded-lg mb-6 flex gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-red-800">
+                <p className="font-medium">{error}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Upload Area - Cover Image */}
           <div className="bg-white p-8 rounded-lg shadow-lg mb-6">
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-primary transition-colors cursor-pointer">
-              <UploadIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-accent mb-2">
-                Pilih File atau Drag & Drop
-              </h3>
-              <p className="text-gray-600 mb-4">
-                PDF, JPEG, atau PNG (Maksimal 50MB)
+            <h3 className="text-lg font-bold text-accent mb-4">Cover Kitab (Opsional)</h3>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary transition-colors">
+              <Image className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600 mb-3">
+                {coverFile ? coverFile.name : 'JPEG atau PNG (Maksimal 5MB)'}
               </p>
-              <button className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-6 rounded-lg transition-colors">
-                Pilih File
-              </button>
+              <input
+                ref={coverInputRef}
+                type="file"
+                accept="image/jpeg,image/png"
+                onChange={handleCoverChange}
+                className="hidden"
+                id="cover-upload"
+              />
+              <label
+                htmlFor="cover-upload"
+                className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-6 rounded-lg transition-colors cursor-pointer inline-block"
+              >
+                Pilih Cover
+              </label>
+            </div>
+          </div>
+
+          {/* Upload Area - PDF File */}
+          <div className="bg-white p-8 rounded-lg shadow-lg mb-6">
+            <h3 className="text-lg font-bold text-accent mb-4">File Kitab (PDF) *</h3>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary transition-colors">
+              <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600 mb-3">
+                {pdfFile ? pdfFile.name : 'PDF (Maksimal 50MB)'}
+              </p>
+              <input
+                ref={pdfInputRef}
+                type="file"
+                accept="application/pdf"
+                onChange={handlePdfChange}
+                className="hidden"
+                id="pdf-upload"
+              />
+              <label
+                htmlFor="pdf-upload"
+                className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-6 rounded-lg transition-colors cursor-pointer inline-block"
+              >
+                Pilih File PDF
+              </label>
             </div>
           </div>
 
@@ -35,12 +222,15 @@ export default function UploadPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Judul Kitab
+                  Judul Kitab *
                 </label>
                 <input
                   type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Contoh: Fathul Qarib"
+                  required
                 />
               </div>
 
@@ -50,6 +240,8 @@ export default function UploadPage() {
                 </label>
                 <input
                   type="text"
+                  value={author}
+                  onChange={(e) => setAuthor(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Nama pengarang"
                 />
@@ -59,14 +251,18 @@ export default function UploadPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Kategori
                 </label>
-                <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
-                  <option>Pilih kategori</option>
-                  <option>Fiqih</option>
-                  <option>Akidah</option>
-                  <option>Tafsir</option>
-                  <option>Hadits</option>
-                  <option>Nahwu</option>
-                  <option>Sharaf</option>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">Pilih kategori</option>
+                  <option value="Fiqih">Fiqih</option>
+                  <option value="Akidah">Akidah</option>
+                  <option value="Tafsir">Tafsir</option>
+                  <option value="Hadits">Hadits</option>
+                  <option value="Nahwu">Nahwu</option>
+                  <option value="Sharaf">Sharaf</option>
                 </select>
               </div>
 
@@ -75,6 +271,8 @@ export default function UploadPage() {
                   Deskripsi
                 </label>
                 <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                   rows={4}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Deskripsi singkat tentang kitab..."
@@ -97,10 +295,14 @@ export default function UploadPage() {
           </div>
 
           {/* Submit Button */}
-          <button className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-lg transition-colors">
-            Upload Kitab
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? 'Uploading...' : 'Upload Kitab'}
           </button>
-        </div>
+        </form>
       </div>
     </div>
   )

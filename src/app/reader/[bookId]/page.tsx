@@ -1,6 +1,95 @@
-import { BookOpen, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react'
+'use client'
+
+import { useState, useEffect } from 'react'
+import { BookOpen, Download, Eye, ArrowLeft } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import { Book } from '@/types/database'
+import Link from 'next/link'
 
 export default function ReaderPage({ params }: { params: { bookId: string } }) {
+  const [book, setBook] = useState<Book | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    fetchBookDetails()
+  }, [params.bookId])
+
+  const fetchBookDetails = async () => {
+    setIsLoading(true)
+    setError('')
+
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('books')
+        .select('*')
+        .eq('id', params.bookId)
+        .single()
+
+      if (fetchError) {
+        throw new Error(fetchError.message)
+      }
+
+      setBook(data)
+    } catch (err: any) {
+      setError(err.message || 'Gagal memuat detail kitab')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleDownload = async () => {
+    if (!book || !book.pdf_url) return
+
+    try {
+      // Open PDF in new tab for download
+      window.open(book.pdf_url, '_blank')
+    } catch (err: any) {
+      alert('Gagal mengunduh file: ' + err.message)
+    }
+  }
+
+  const handleView = async () => {
+    if (!book || !book.pdf_url) return
+
+    try {
+      // Open PDF in new tab for viewing
+      window.open(book.pdf_url, '_blank')
+    } catch (err: any) {
+      alert('Gagal membuka file: ' + err.message)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-secondary flex items-center justify-center">
+        <div className="text-center">
+          <BookOpen className="w-16 h-16 text-primary mx-auto mb-4 animate-pulse" />
+          <p className="text-gray-600">Memuat detail kitab...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !book) {
+    return (
+      <div className="min-h-screen bg-secondary flex items-center justify-center">
+        <div className="text-center">
+          <div className="bg-red-50 border border-red-200 p-6 rounded-lg max-w-md">
+            <p className="text-red-800 mb-4">{error || 'Kitab tidak ditemukan'}</p>
+            <Link
+              href="/library"
+              className="inline-flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              Kembali ke Perpustakaan
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-secondary">
       {/* Header */}
@@ -8,47 +97,135 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
+              <Link
+                href="/library"
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <ArrowLeft className="w-6 h-6 text-gray-600" />
+              </Link>
               <BookOpen className="w-8 h-8 text-primary" />
               <div>
-                <h1 className="text-xl font-bold text-accent">Nama Kitab</h1>
-                <p className="text-sm text-gray-600">Pengarang</p>
+                <h1 className="text-xl font-bold text-accent">{book.title}</h1>
+                {book.author && (
+                  <p className="text-sm text-gray-600">{book.author}</p>
+                )}
               </div>
             </div>
             
             <div className="flex items-center gap-2">
-              <button className="p-2 hover:bg-gray-100 rounded-lg">
-                <ZoomOut className="w-5 h-5 text-gray-600" />
-              </button>
-              <span className="text-sm text-gray-600 min-w-[60px] text-center">100%</span>
-              <button className="p-2 hover:bg-gray-100 rounded-lg">
-                <ZoomIn className="w-5 h-5 text-gray-600" />
-              </button>
+              {book.pdf_url && (
+                <>
+                  <button
+                    onClick={handleView}
+                    className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors"
+                  >
+                    <Eye className="w-5 h-5" />
+                    Lihat PDF
+                  </button>
+                  <button
+                    onClick={handleDownload}
+                    className="flex items-center gap-2 bg-accent text-white px-4 py-2 rounded-lg hover:bg-accent-dark transition-colors"
+                  >
+                    <Download className="w-5 h-5" />
+                    Download
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Reader Content */}
+      {/* Book Details */}
       <div className="container mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg shadow-lg p-8 min-h-[600px] flex items-center justify-center">
-          <div className="text-center text-gray-400">
-            <BookOpen className="w-24 h-24 mx-auto mb-4" />
-            <p className="text-lg">Halaman kitab akan ditampilkan di sini</p>
-            <p className="text-sm mt-2">Book ID: {params.bookId}</p>
-          </div>
-        </div>
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div className="md:flex">
+              {/* Cover Image */}
+              <div className="md:w-1/3 bg-gray-200 flex items-center justify-center p-8">
+                {book.cover_image_url ? (
+                  <img
+                    src={book.cover_image_url}
+                    alt={book.title}
+                    className="w-full h-auto rounded-lg shadow-md"
+                  />
+                ) : (
+                  <BookOpen className="w-32 h-32 text-gray-400" />
+                )}
+              </div>
 
-        {/* Navigation */}
-        <div className="flex items-center justify-center gap-4 mt-8">
-          <button className="flex items-center gap-2 bg-accent hover:bg-accent-dark text-white font-bold py-2 px-6 rounded-lg transition-colors">
-            <ChevronLeft className="w-5 h-5" />
-            Sebelumnya
-          </button>
-          <span className="text-gray-700">Halaman 1 dari 1</span>
-          <button className="flex items-center gap-2 bg-accent hover:bg-accent-dark text-white font-bold py-2 px-6 rounded-lg transition-colors">
-            Selanjutnya
-            <ChevronRight className="w-5 h-5" />
-          </button>
+              {/* Book Information */}
+              <div className="md:w-2/3 p-8">
+                <h2 className="text-3xl font-bold text-accent mb-4">{book.title}</h2>
+                
+                <div className="space-y-3 mb-6">
+                  {book.author && (
+                    <div>
+                      <span className="text-sm font-medium text-gray-700">Pengarang:</span>
+                      <p className="text-gray-900">{book.author}</p>
+                    </div>
+                  )}
+
+                  {book.category && (
+                    <div>
+                      <span className="text-sm font-medium text-gray-700">Kategori:</span>
+                      <p className="text-gray-900">
+                        <span className="inline-block bg-primary text-white text-sm px-3 py-1 rounded">
+                          {book.category}
+                        </span>
+                      </p>
+                    </div>
+                  )}
+
+                  {book.description && (
+                    <div>
+                      <span className="text-sm font-medium text-gray-700">Deskripsi:</span>
+                      <p className="text-gray-700 mt-1 whitespace-pre-line">{book.description}</p>
+                    </div>
+                  )}
+
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Ditambahkan:</span>
+                    <p className="text-gray-900">
+                      {new Date(book.created_at).toLocaleDateString('id-ID', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                {book.pdf_url && (
+                  <div className="flex gap-3 pt-4 border-t">
+                    <button
+                      onClick={handleView}
+                      className="flex-1 flex items-center justify-center gap-2 bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary-dark transition-colors font-medium"
+                    >
+                      <Eye className="w-5 h-5" />
+                      Baca Sekarang
+                    </button>
+                    <button
+                      onClick={handleDownload}
+                      className="flex-1 flex items-center justify-center gap-2 bg-accent text-white px-6 py-3 rounded-lg hover:bg-accent-dark transition-colors font-medium"
+                    >
+                      <Download className="w-5 h-5" />
+                      Download PDF
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Info Message */}
+          <div className="mt-8 bg-blue-50 border border-blue-200 p-4 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Catatan:</strong> Fitur pembaca PDF interaktif akan tersedia di versi mendatang. 
+              Untuk saat ini, gunakan tombol "Lihat PDF" atau "Download" untuk membaca kitab.
+            </p>
+          </div>
         </div>
       </div>
     </div>
