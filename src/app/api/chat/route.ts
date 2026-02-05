@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import { sanitizeString, isNonEmptyArray } from '@/lib/validation'
+
+// Request timeout in milliseconds
+const REQUEST_TIMEOUT = 60000 // 60 seconds for AI responses
+
+// Max context length to prevent token overflow
+const MAX_CONTEXT_LENGTH = 8000
+const MAX_MESSAGE_LENGTH = 2000
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,23 +16,59 @@ export async function POST(request: NextRequest) {
     if (!apiKey) {
       return NextResponse.json(
         {
-          error: 'OpenAI API Key belum dikonfigurasi',
-          details: 'Silakan tambahkan OPENAI_API_KEY di file .env.local'
+          error: 'Layanan AI tidak tersedia',
+          message: 'Layanan chat AI sedang tidak tersedia saat ini'
         },
-        { status: 500 }
+        { status: 503 }
       )
     }
 
-    // Parse request body
-    const body = await request.json()
+    // Parse request body with timeout
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Request timeout')), REQUEST_TIMEOUT)
+    )
+
+    const body = await Promise.race([
+      request.json(),
+      timeoutPromise
+    ]) as { messages?: any[]; context?: string }
+
     const { messages, context } = body
 
-    if (!messages || !Array.isArray(messages)) {
+    // Validate messages
+    if (!messages || !isNonEmptyArray(messages)) {
       return NextResponse.json(
-        { error: 'Parameter messages (array) diperlukan' },
+        { 
+          error: 'Parameter tidak valid',
+          message: 'Parameter messages (array) diperlukan' 
+        },
         { status: 400 }
       )
     }
+
+    // Validate message structure and sanitize
+    const sanitizedMessages = messages.map((msg) => {
+      if (!msg.role || !msg.content) {
+        throw new Error('Setiap message harus memiliki role dan content')
+      }
+      
+      if (msg.role !== 'user' && msg.role !== 'assistant') {
+        throw new Error('Role harus berupa "user" atau "assistant"')
+      }
+
+      return {
+        role: msg.role,
+        content: sanitizeString(msg.content).substring(0, MAX_MESSAGE_LENGTH)
+      }
+    })
+
+    // Limit number of messages to prevent token overflow
+    const limitedMessages = sanitizedMessages.slice(-10) // Keep last 10 messages
+
+    // Sanitize and limit context
+    const sanitizedContext = context 
+      ? sanitizeString(context).substring(0, MAX_CONTEXT_LENGTH)
+      : ''
 
     // Initialize OpenAI client
     const openai = new OpenAI({
@@ -34,9 +78,9 @@ export async function POST(request: NextRequest) {
     // System prompt engineering - "Ustadz Turosa"
     const systemPrompt = `Anda adalah Ustadz Turosa, asisten belajar Kitab Kuning yang ahli dalam gramatika Arab (Nahwu & Sharaf), terjemahan, dan penjelasan konteks fiqih/akidah.
 
-${context ? `Berikut adalah teks kitab yang sedang dipelajari santri:
+${sanitizedContext ? `Berikut adalah teks kitab yang sedang dipelajari santri:
 ---
-${context}
+${sanitizedContext}
 ---
 ` : ''}
 
@@ -57,19 +101,22 @@ Prinsip menjawab:
     // Prepare messages for OpenAI
     const chatMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
       { role: 'system', content: systemPrompt },
-      ...messages.map((msg: any) => ({
+      ...limitedMessages.map((msg) => ({
         role: msg.role as 'user' | 'assistant',
         content: msg.content,
       })),
     ]
 
-    // Call OpenAI API
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: chatMessages,
-      temperature: 0.7,
-      max_tokens: 1000,
-    })
+    // Call OpenAI API with timeout
+    const completion = await Promise.race([
+      openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: chatMessages,
+        temperature: 0.7,
+        max_tokens: 1000,
+      }),
+      timeoutPromise
+    ]) as OpenAI.Chat.Completions.ChatCompletion
 
     const assistantMessage = completion.choices[0]?.message?.content || 'Maaf, saya tidak dapat memberikan jawaban.'
 
@@ -83,14 +130,25 @@ Prinsip menjawab:
       console.error('Chat API Error:', error)
     }
 
+    // Handle specific errors
+    if (error.message === 'Request timeout') {
+      return NextResponse.json(
+        {
+          error: 'Permintaan timeout',
+          message: 'Permintaan memakan waktu terlalu lama, silakan coba lagi',
+        },
+        { status: 504 }
+      )
+    }
+
     // Handle OpenAI specific errors
     if (error.status === 401) {
       return NextResponse.json(
         {
-          error: 'API Key tidak valid',
-          details: 'Periksa kembali OPENAI_API_KEY di .env.local'
+          error: 'Layanan tidak tersedia',
+          message: 'Layanan chat AI sedang tidak tersedia'
         },
-        { status: 500 }
+        { status: 503 }
       )
     }
 
@@ -98,16 +156,29 @@ Prinsip menjawab:
       return NextResponse.json(
         {
           error: 'Terlalu banyak permintaan',
-          details: 'Silakan coba beberapa saat lagi'
+          message: 'Silakan coba beberapa saat lagi'
         },
         { status: 429 }
+      )
+    }
+
+    // Handle validation errors
+    if (error.message && error.message.includes('harus memiliki')) {
+      return NextResponse.json(
+        {
+          error: 'Format data tidak valid',
+          message: error.message
+        },
+        { status: 400 }
       )
     }
 
     return NextResponse.json(
       {
         error: 'Gagal memproses chat',
-        details: process.env.NODE_ENV === 'development' ? error.message : 'Terjadi kesalahan saat memproses permintaan',
+        message: process.env.NODE_ENV === 'development' 
+          ? error.message 
+          : 'Terjadi kesalahan saat memproses permintaan',
       },
       { status: 500 }
     )

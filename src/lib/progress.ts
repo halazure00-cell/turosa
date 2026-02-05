@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { isValidUUID } from './validation'
 
 /**
  * Save user's progress for a specific chapter
@@ -6,6 +7,11 @@ import { supabase } from './supabase'
  */
 export async function saveProgress(userId: string, chapterId: string) {
   try {
+    // Validate inputs
+    if (!isValidUUID(userId) || !isValidUUID(chapterId)) {
+      throw new Error('Invalid user ID or chapter ID format')
+    }
+
     const { data, error } = await supabase
       .from('user_progress')
       .upsert(
@@ -34,6 +40,11 @@ export async function saveProgress(userId: string, chapterId: string) {
  */
 export async function markAsCompleted(userId: string, chapterId: string) {
   try {
+    // Validate inputs
+    if (!isValidUUID(userId) || !isValidUUID(chapterId)) {
+      throw new Error('Invalid user ID or chapter ID format')
+    }
+
     const { data, error } = await supabase
       .from('user_progress')
       .upsert(
@@ -63,6 +74,11 @@ export async function markAsCompleted(userId: string, chapterId: string) {
  */
 export async function getLastReadChapter(userId: string) {
   try {
+    // Validate input
+    if (!isValidUUID(userId)) {
+      throw new Error('Invalid user ID format')
+    }
+
     const { data, error } = await supabase
       .from('user_progress')
       .select(`
@@ -97,28 +113,33 @@ export async function getLastReadChapter(userId: string) {
  */
 export async function getUserStats(userId: string) {
   try {
+    // Validate input
+    if (!isValidUUID(userId)) {
+      throw new Error('Invalid user ID format')
+    }
+
     // Get total chapters read (with progress)
-    const { data: progressData, error: progressError } = await supabase
+    const { count: chaptersReadCount, error: progressError } = await supabase
       .from('user_progress')
-      .select('chapter_id', { count: 'exact' })
+      .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
 
     if (progressError) throw progressError
 
     // Get completed chapters count
-    const { data: completedData, error: completedError } = await supabase
+    const { count: chaptersCompletedCount, error: completedError } = await supabase
       .from('user_progress')
-      .select('chapter_id', { count: 'exact' })
+      .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
       .eq('is_completed', true)
 
     if (completedError) throw completedError
 
-    // Get unique books being read
+    // Get unique books being read - optimized query
     const { data: booksData, error: booksError } = await supabase
       .from('user_progress')
       .select(`
-        chapter:chapters(
+        chapter:chapters!inner(
           book_id
         )
       `)
@@ -131,14 +152,20 @@ export async function getUserStats(userId: string) {
       booksData?.map((item: any) => item.chapter?.book_id).filter(Boolean) || []
     )
 
+    const chaptersRead = chaptersReadCount || 0
+    const chaptersCompleted = chaptersCompletedCount || 0
+
+    // Safe calculation to prevent divide by zero
+    const completionRate = chaptersRead > 0
+      ? Math.round((chaptersCompleted / chaptersRead) * 100)
+      : 0
+
     return {
       data: {
-        chaptersRead: progressData?.length || 0,
-        chaptersCompleted: completedData?.length || 0,
+        chaptersRead,
+        chaptersCompleted,
         booksInProgress: uniqueBookIds.size,
-        completionRate: progressData?.length
-          ? Math.round((completedData?.length || 0) / progressData.length * 100)
-          : 0,
+        completionRate,
       },
       error: null,
     }
@@ -161,6 +188,11 @@ export async function getUserStats(userId: string) {
  */
 export async function getChapterProgress(userId: string, chapterId: string) {
   try {
+    // Validate inputs
+    if (!isValidUUID(userId) || !isValidUUID(chapterId)) {
+      throw new Error('Invalid user ID or chapter ID format')
+    }
+
     const { data, error } = await supabase
       .from('user_progress')
       .select('*')
