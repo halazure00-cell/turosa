@@ -129,6 +129,8 @@ Aplikasi ini telah dioptimasi dan siap untuk deployment di Vercel:
 
 ## 🌐 Environment Variables
 
+### ⚠️ Masalah Upload PDF? Lihat [SETUP_GUIDE.md](SETUP_GUIDE.md) untuk solusi lengkap!
+
 ### Prerequisites
 
 Sebelum menjalankan aplikasi, pastikan Anda memiliki:
@@ -220,6 +222,9 @@ Dikembangkan dengan ❤️ untuk kemudahan pembelajaran Kitab Kuning.
 
 ## 📚 Documentation
 
+- **[Setup Guide - Panduan Lengkap Setup](SETUP_GUIDE.md)** - 🔥 **BACA INI JIKA UPLOAD PDF GAGAL!**
 - [Phase 3 Implementation](IMPLEMENTATION_SUMMARY.md) - OCR & Digitization
 - [Phase 4 Implementation](PHASE4_IMPLEMENTATION.md) - Interactive Reader & Progress Tracking
 - [Digitization Guide](DIGITIZATION_GUIDE.md) - User guide for digitizing books
+- [Deployment Guide](DEPLOYMENT.md) - Deploy to Vercel
+- [Production Checklist](PRODUCTION_CHECKLIST.md) - Pre-deployment checklist
