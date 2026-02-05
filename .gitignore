@@ -34,4 +34,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-maxxis-ocr-personal-40257282844a.json
+
+# Google Cloud credentials (security)
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!vercel.json

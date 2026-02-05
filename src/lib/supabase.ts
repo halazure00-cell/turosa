@@ -1,11 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Supabase client initialization
-// These environment variables should be configured in production
+// Get environment variables with fallback for build time
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
 
-// Log warning if using placeholder values (only in development)
+// Warn in development if credentials are missing
 if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   if (supabaseUrl === 'https://placeholder.supabase.co' || supabaseAnonKey === 'placeholder-key') {
     console.warn('Warning: Supabase credentials not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.')
