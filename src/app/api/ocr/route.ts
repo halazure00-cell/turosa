@@ -76,12 +76,15 @@ export async function POST(request: NextRequest) {
       detectionCount: detections.length,
     })
   } catch (error: any) {
-    console.error('OCR Error:', error)
+    // Log error only in development
+    if (process.env.NODE_ENV === 'development') {
+      console.error('OCR Error:', error)
+    }
     
     return NextResponse.json(
       {
         error: 'Gagal melakukan OCR',
-        details: error.message || 'Unknown error',
+        details: process.env.NODE_ENV === 'development' ? error.message : 'Terjadi kesalahan saat memproses gambar',
       },
       { status: 500 }
     )

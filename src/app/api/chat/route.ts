@@ -78,7 +78,10 @@ Prinsip menjawab:
       usage: completion.usage,
     })
   } catch (error: any) {
-    console.error('Chat API Error:', error)
+    // Log error only in development
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Chat API Error:', error)
+    }
 
     // Handle OpenAI specific errors
     if (error.status === 401) {
@@ -104,7 +107,7 @@ Prinsip menjawab:
     return NextResponse.json(
       {
         error: 'Gagal memproses chat',
-        details: error.message || 'Unknown error',
+        details: process.env.NODE_ENV === 'development' ? error.message : 'Terjadi kesalahan saat memproses permintaan',
       },
       { status: 500 }
     )

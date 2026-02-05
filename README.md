@@ -111,6 +111,22 @@ npm run build
 npm start
 ```
 
+## 🚀 Deploy ke Vercel
+
+Aplikasi ini telah dioptimasi dan siap untuk deployment di Vercel:
+
+1. **Quick Deploy**: Ikuti panduan lengkap di [DEPLOYMENT.md](DEPLOYMENT.md)
+2. **Production Checklist**: Lihat [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md)
+3. **Environment Setup**: Copy `.env.example` ke `.env.local` dan isi semua nilai
+
+### Fitur Production Ready
+- ✅ Security headers (HSTS, X-Frame-Options, CSP)
+- ✅ Image optimization (WebP/AVIF)
+- ✅ Automatic compression
+- ✅ Health check endpoint (`/api/health`)
+- ✅ Error handling untuk production
+- ✅ Environment variable validation
+
 ## 🌐 Environment Variables
 
 ### Prerequisites
