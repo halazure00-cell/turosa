@@ -94,7 +94,7 @@ export default function TopNav() {
             className="fixed inset-0 bg-black/50 z-30 lg:hidden animate-in"
             onClick={() => setIsOpen(false)}
           />
-          <aside className="fixed top-0 right-0 bottom-0 w-64 bg-white z-40 shadow-elevated animate-slide-down lg:hidden">
+          <aside className="fixed top-0 right-0 bottom-0 w-64 bg-white z-40 shadow-elevated animate-in lg:hidden">
             <div className="p-6 pt-20">
               {user ? (
                 <div className="mb-6">

@@ -42,7 +42,7 @@ const config: Config = {
         info: '#3B82F6',
       },
       fontFamily: {
-        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        sans: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
         arabic: ['Amiri', 'Scheherazade New', 'serif'],
       },
       spacing: {
