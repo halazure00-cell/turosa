@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { Toaster } from 'sonner'
+import TopNav from '@/components/TopNav'
+import BottomNav from '@/components/BottomNav'
 
 export const metadata: Metadata = {
   title: 'Turosa - Kitab Learning App',
@@ -36,12 +38,21 @@ export const metadata: Metadata = {
   icons: {
     icon: '/favicon.ico',
   },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Turosa',
+  },
 }
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
+  userScalable: true,
+  viewportFit: 'cover',
+  themeColor: '#059669',
 }
 
 export default function RootLayout({
@@ -50,16 +61,21 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="id">
+    <html lang="id" className="scroll-smooth">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-sans bg-secondary antialiased">
-        {children}
-        <Toaster position="top-right" richColors />
+        <TopNav />
+        <main className="pt-16 pb-20 lg:pb-6 min-h-screen">
+          {children}
+        </main>
+        <BottomNav />
+        <Toaster position="top-center" richColors closeButton />
       </body>
     </html>
   )
 }
+

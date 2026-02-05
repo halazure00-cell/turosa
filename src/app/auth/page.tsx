@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { signIn, signUp } from '@/lib/supabase'
 import { toast } from 'sonner'
+import { Mail, Lock, ArrowRight, Sparkles } from 'lucide-react'
 
 export default function AuthPage() {
   const router = useRouter()
@@ -45,81 +46,108 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-secondary to-secondary-dark flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-primary mb-2">Turosa</h1>
-          <p className="text-gray-600">
-            {isSignUp ? 'Buat akun baru' : 'Masuk ke akun Anda'}
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50 flex items-center justify-center px-4">
+      <div className="w-full max-w-md">
+        {/* Logo & Header */}
+        <div className="text-center mb-8 animate-slide-up">
+          <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-medium">
+            <span className="text-white font-bold text-2xl">T</span>
+          </div>
+          <h1 className="text-3xl font-bold text-accent-700 mb-2">
+            {isSignUp ? 'Buat Akun Baru' : 'Selamat Datang Kembali'}
+          </h1>
+          <p className="text-accent">
+            {isSignUp ? 'Mulai perjalanan belajar Anda' : 'Lanjutkan pembelajaran Anda'}
           </p>
         </div>
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-            {error}
-          </div>
-        )}
+        {/* Form Card */}
+        <div className="card-elevated p-6 lg:p-8 animate-scale-in">
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="nama@email.com"
-              required
-              disabled={loading}
-            />
-          </div>
+          <form className="space-y-5" onSubmit={handleSubmit}>
+            {/* Email Input */}
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-accent-700 mb-2">
+                Email
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-accent" />
+                <input
+                  type="email"
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="input pl-11 w-full"
+                  placeholder="nama@email.com"
+                  required
+                  disabled={loading}
+                />
+              </div>
+            </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="••••••••"
-              required
-              disabled={loading}
-            />
-          </div>
+            {/* Password Input */}
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-accent-700 mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-accent" />
+                <input
+                  type="password"
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="input pl-11 w-full"
+                  placeholder="••••••••"
+                  required
+                  disabled={loading}
+                />
+              </div>
+            </div>
 
-          <button
-            type="submit"
-            className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={loading}
-          >
-            {loading ? 'Memproses...' : (isSignUp ? 'Daftar' : 'Masuk')}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <p className="text-gray-600">
-            {isSignUp ? 'Sudah punya akun?' : 'Belum punya akun?'}{' '}
+            {/* Submit Button */}
             <button
-              onClick={() => {
-                setIsSignUp(!isSignUp)
-                setError(null)
-              }}
-              className="text-primary font-medium hover:underline"
+              type="submit"
+              className="btn-primary w-full text-base py-4 group shadow-medium hover:shadow-elevated"
+              disabled={loading}
             >
-              {isSignUp ? 'Masuk sekarang' : 'Daftar sekarang'}
+              {loading ? (
+                <span>Memproses...</span>
+              ) : (
+                <>
+                  <span>{isSignUp ? 'Daftar Sekarang' : 'Masuk'}</span>
+                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
             </button>
-          </p>
+          </form>
+
+          {/* Toggle Sign Up/In */}
+          <div className="mt-6 text-center">
+            <p className="text-accent text-sm">
+              {isSignUp ? 'Sudah punya akun?' : 'Belum punya akun?'}{' '}
+              <button
+                onClick={() => {
+                  setIsSignUp(!isSignUp)
+                  setError(null)
+                }}
+                className="text-primary font-semibold hover:underline"
+              >
+                {isSignUp ? 'Masuk sekarang' : 'Daftar sekarang'}
+              </button>
+            </p>
+          </div>
         </div>
 
+        {/* Back to Home */}
         <div className="mt-6 text-center">
-          <Link href="/" className="text-accent hover:underline">
-            Kembali ke beranda
+          <Link href="/" className="text-accent text-sm hover:text-primary transition-colors inline-flex items-center gap-1">
+            ← Kembali ke beranda
           </Link>
         </div>
       </div>
