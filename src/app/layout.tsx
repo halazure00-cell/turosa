@@ -3,6 +3,7 @@ import './globals.css'
 import { Toaster } from 'sonner'
 import TopNav from '@/components/TopNav'
 import BottomNav from '@/components/BottomNav'
+import ConfigLogger from '@/components/ConfigLogger'
 
 export const metadata: Metadata = {
   title: 'Turosa - Kitab Learning App',
@@ -68,6 +69,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-sans bg-secondary antialiased">
+        <ConfigLogger />
         <TopNav />
         <main className="pt-16 pb-20 lg:pb-6 min-h-screen">
           {children}

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useRef, ChangeEvent, FormEvent } from 'react'
+import { useState, useRef, ChangeEvent, FormEvent, useEffect } from 'react'
 import { Upload as UploadIcon, FileText, Image, AlertCircle, CheckCircle } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { supabase, isSupabaseConfigured, validateSupabaseConnection } from '@/lib/supabase'
 import { toast } from 'sonner'
 
 export default function UploadPage() {
@@ -15,9 +15,28 @@ export default function UploadPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [uploadSuccess, setUploadSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [configError, setConfigError] = useState<string | null>(null)
 
   const coverInputRef = useRef<HTMLInputElement>(null)
   const pdfInputRef = useRef<HTMLInputElement>(null)
+
+  // Check Supabase configuration on mount
+  useEffect(() => {
+    const checkConfig = async () => {
+      if (!isSupabaseConfigured()) {
+        setConfigError('Aplikasi belum dikonfigurasi dengan benar. Environment variables Supabase belum diatur.')
+        return
+      }
+      
+      // Validate connection
+      const { isValid, error: validationError } = await validateSupabaseConnection()
+      if (!isValid) {
+        setConfigError(validationError || 'Tidak dapat terhubung ke Supabase')
+      }
+    }
+    
+    checkConfig()
+  }, [])
 
   const handleCoverChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -35,6 +54,23 @@ export default function UploadPage() {
     e.preventDefault()
     setError('')
     setUploadSuccess(false)
+
+    // Check configuration first
+    if (!isSupabaseConfigured()) {
+      const errorMsg = 'Sistem belum dikonfigurasi. Hubungi administrator untuk mengatur credentials Supabase.'
+      setError(errorMsg)
+      toast.error(errorMsg)
+      return
+    }
+
+    // Validate connection before upload
+    const { isValid, error: validationError } = await validateSupabaseConnection()
+    if (!isValid) {
+      const errorMsg = validationError || 'Tidak dapat terhubung ke server. Periksa konfigurasi.'
+      setError(errorMsg)
+      toast.error(errorMsg)
+      return
+    }
 
     // Validation
     if (!title.trim()) {
@@ -76,6 +112,10 @@ export default function UploadPage() {
           .upload(coverFileName, coverFile)
 
         if (coverError) {
+          // Provide more helpful error messages
+          if (coverError.message.includes('Invalid API key') || coverError.message.includes('JWT')) {
+            throw new Error('Konfigurasi API tidak valid. Hubungi administrator untuk memperbaiki SUPABASE credentials.')
+          }
           throw new Error(`Gagal upload cover: ${coverError.message}`)
         }
 
@@ -94,6 +134,13 @@ export default function UploadPage() {
         .upload(pdfFileName, pdfFile)
 
       if (pdfError) {
+        // Provide more helpful error messages
+        if (pdfError.message.includes('Invalid API key') || pdfError.message.includes('JWT') || pdfError.message.includes('invalid')) {
+          throw new Error('Konfigurasi API tidak valid. Hubungi administrator untuk memperbaiki credentials Supabase (NEXT_PUBLIC_SUPABASE_URL dan NEXT_PUBLIC_SUPABASE_ANON_KEY).')
+        }
+        if (pdfError.message.includes('row-level security')) {
+          throw new Error('Akses ditolak. Pastikan Anda sudah login dan memiliki izin untuk upload.')
+        }
         throw new Error(`Gagal upload PDF: ${pdfError.message}`)
       }
 
@@ -143,6 +190,7 @@ export default function UploadPage() {
       const errorMessage = err.message || 'Terjadi kesalahan saat upload'
       setError(errorMessage)
       toast.error(errorMessage)
+      console.error('Upload error:', err)
     } finally {
       setIsLoading(false)
     }
@@ -162,6 +210,33 @@ export default function UploadPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+          {/* Configuration Error Message */}
+          {configError && (
+            <div className="card p-6 mb-6 border-2 border-red-300 bg-red-50 animate-slide-down">
+              <div className="flex gap-3">
+                <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-red-900 mb-2">⚠️ Konfigurasi Sistem Tidak Lengkap</p>
+                  <p className="text-sm text-red-800 mb-3">{configError}</p>
+                  <div className="bg-red-100 p-4 rounded-lg">
+                    <p className="text-sm font-semibold text-red-900 mb-2">Panduan untuk Administrator:</p>
+                    <ol className="text-sm text-red-800 space-y-2 list-decimal list-inside">
+                      <li>Buat project di <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="underline font-semibold">Supabase</a></li>
+                      <li>Dapatkan URL dan Anon Key dari Dashboard Supabase</li>
+                      <li>Set environment variables berikut:
+                        <ul className="ml-6 mt-1 space-y-1 list-disc list-inside">
+                          <li><code className="bg-red-200 px-1 rounded">NEXT_PUBLIC_SUPABASE_URL</code></li>
+                          <li><code className="bg-red-200 px-1 rounded">NEXT_PUBLIC_SUPABASE_ANON_KEY</code></li>
+                        </ul>
+                      </li>
+                      <li>Restart aplikasi setelah konfigurasi</li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Success Message */}
           {uploadSuccess && (
             <div className="card p-4 mb-6 border-2 border-green-200 bg-green-50 animate-slide-down">
