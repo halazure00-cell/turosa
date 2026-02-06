@@ -18,17 +18,13 @@ NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-#### OpenAI API (for AI Chat and Quiz)
+#### Ollama AI Configuration (for AI Chat and Quiz)
 ```
-OPENAI_API_KEY=your_openai_api_key
+AI_BASE_URL=http://your-ollama-server:11434
+AI_MODEL=llama2
 ```
 
-#### Google Cloud Vision API (for OCR)
-```
-GOOGLE_CLIENT_EMAIL=your_service_account_email
-GOOGLE_PRIVATE_KEY=your_service_account_private_key
-GOOGLE_PROJECT_ID=your_google_cloud_project_id
-```
+**Note:** OCR functionality is built-in using Tesseract.js (no additional API keys required).
 
 ### Deployment Steps
 
@@ -48,8 +44,9 @@ GOOGLE_PROJECT_ID=your_google_cloud_project_id
 3. **Add Environment Variables**
    - Navigate to Project Settings → Environment Variables
    - Add all required variables listed above
-   - **Important**: For `GOOGLE_PRIVATE_KEY`, ensure newlines are properly formatted:
-     - Replace `\n` with actual newlines or use the format: `"-----BEGIN PRIVATE KEY-----\nYOUR_KEY_HERE\n-----END PRIVATE KEY-----"`
+   - **Important**: For `AI_BASE_URL`, ensure your Ollama server is accessible from Vercel
+     - Use a public URL or Vercel-accessible internal URL
+     - Default Ollama port is 11434
 
 4. **Deploy**
    - Click "Deploy"
@@ -71,6 +68,38 @@ vercel --prod
 # Follow prompts to set up environment variables
 ```
 
+### Ollama Server Deployment
+
+#### Option 1: Deploy on Same Server (Development/Small Scale)
+```bash
+# Install Ollama on your server
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Pull your model
+ollama pull llama2
+
+# Run Ollama (it runs on port 11434 by default)
+ollama serve
+```
+
+#### Option 2: Separate Ollama Server (Production/Scale)
+1. **Deploy Ollama on a separate server/container**
+   - Can use Docker: `docker run -d -p 11434:11434 ollama/ollama`
+   - Or dedicated server with Ollama installed
+   
+2. **Configure networking and security**
+   - Ensure server is accessible from Vercel
+   - Use HTTPS for production (reverse proxy with nginx/caddy)
+   - Set appropriate firewall rules
+   - **Important**: Implement authentication or use VPN/private networking to prevent unauthorized access
+   - Consider rate limiting to prevent abuse
+   
+3. **Update Environment Variables**
+   ```
+   AI_BASE_URL=https://your-ollama-server.com:11434
+   AI_MODEL=llama2
+   ```
+
 ### Post-Deployment Configuration
 
 #### 1. Custom Domain (Optional)
@@ -81,12 +110,13 @@ vercel --prod
 #### 2. Verify Deployment
 - Visit `/api/health` endpoint to check server status
 - Test authentication flow
-- Verify OCR functionality
-- Test AI chat features
+- Verify OCR functionality (built-in with Tesseract.js)
+- Test AI chat features (ensure Ollama server is reachable)
 
 #### 3. Monitor Application
 - Check Vercel Analytics for performance metrics
 - Monitor Runtime Logs for errors
+- Monitor Ollama server health and resource usage
 - Set up alerts for critical issues
 
 ### Security Checklist
@@ -119,9 +149,15 @@ vercel --prod
 - Ensure database migrations are applied
 
 #### Environment Variable Issues
-- For `GOOGLE_PRIVATE_KEY`: Use multiline format or escape newlines properly
+- Verify `AI_BASE_URL` points to accessible Ollama server
 - Ensure all `NEXT_PUBLIC_` prefixed vars are set for client-side access
 - Redeploy after updating environment variables
+
+#### Ollama Connection Issues
+- Check Ollama server is running: `curl http://your-server:11434/api/tags`
+- Verify network connectivity from Vercel to Ollama server
+- Check firewall rules allow traffic on port 11434
+- Ensure model is pulled: `ollama pull llama2`
 
 ### Continuous Deployment
 

@@ -45,8 +45,8 @@ Upload Kitab → Digitisasi (OCR) → Baca & Belajar → Quiz → Diskusi
 **Tujuan:** Mengekstrak teks Arab dari gambar/PDF untuk pembelajaran interaktif
 
 **Prerequisites:**
-- Google Cloud Vision API credentials configured
 - Kitab sudah di-upload
+- Browser modern dengan JavaScript enabled
 
 **Steps:**
 1. Navigate to book details page
@@ -128,39 +128,41 @@ Select Chapter → Read Content → Mark Progress → Next Chapter
 
 ---
 
-### 4. Quiz untuk Testing Pemahaman
+### 4. AI Chat untuk Bantuan Belajar
 
-**Tujuan:** Menguji dan mengukur pemahaman terhadap materi
+**Tujuan:** Mendapat bantuan pemahaman real-time dari AI tutor
 
 **Prerequisites:**
-- OpenAI API configured
+- Ollama server accessible
 - Chapter sudah dibaca
 - At least 1 chapter dengan content tersedia
 
 **Steps:**
 1. Navigate to chapter yang sudah dibaca
-2. Click "Generate Quiz" atau "Uji Pemahaman"
-3. AI generates questions based on chapter content
-4. Answer multiple choice/essay questions
-5. Submit answers
-6. Review score dan feedback
-7. Identify weak areas untuk di-review
+2. Click "Tanya Ustadz Turosa" button
+3. Ask questions about the chapter content
+4. Receive AI-powered explanations
+5. Continue conversation for deeper understanding
+6. Use for grammar, translation, or context questions
 
-**Quiz Types:**
-- Multiple Choice (4 options)
-- True/False
-- Essay/Short Answer
-- Fill in the blanks
+**Question Types You Can Ask:**
+- Grammar explanations (Nahwu/Sharaf)
+- Translation requests (literal & contextual)
+- Context and meaning clarification
+- Fiqh/Aqeedah interpretations
+- Word-by-word analysis
 
-**Adaptive Learning:**
-- Quiz difficulty adjusts based on performance
-- Questions focus on areas yang belum dikuasai
-- Recommendations untuk re-reading
+**AI Assistant Features:**
+- Context-aware responses based on chapter
+- Pedagogical approach to teaching
+- Arabic language expertise
+- Islamic scholarship knowledge
 
 **Expected Outcome:**
-- Score dan feedback tersimpan
-- Identifikasi gap dalam pemahaman
-- Motivation untuk improvement
+- Immediate clarification of confusing concepts
+- Deeper understanding through dialogue
+- Personalized learning experience
+- Confidence building through Q&A
 
 ---
 

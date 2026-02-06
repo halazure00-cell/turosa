@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { checkAIHealth } from '@/lib/ai-provider'
+import { checkOCRHealth } from '@/lib/ocr-provider'
 
 /**
  * Admin Health Check API
@@ -24,8 +26,15 @@ interface HealthCheckResult {
       }>
     }
     apis: {
-      vision: { status: 'ok' | 'unconfigured' }
-      openai: { status: 'ok' | 'unconfigured' }
+      ai: { 
+        status: 'ok' | 'unconfigured' | 'error'
+        details?: string
+        models?: string[]
+      }
+      ocr: { 
+        status: 'ok'
+        details: string
+      }
     }
     environment: {
       status: 'ok' | 'error'
@@ -51,8 +60,8 @@ export async function GET(request: NextRequest) {
         buckets: []
       },
       apis: {
-        vision: { status: 'unconfigured' },
-        openai: { status: 'unconfigured' }
+        ai: { status: 'unconfigured' },
+        ocr: { status: 'ok', details: 'Built-in' }
       },
       environment: {
         status: 'ok',
@@ -67,10 +76,8 @@ export async function GET(request: NextRequest) {
   const envVars = {
     'NEXT_PUBLIC_SUPABASE_URL': process.env.NEXT_PUBLIC_SUPABASE_URL,
     'NEXT_PUBLIC_SUPABASE_ANON_KEY': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    'GOOGLE_CLIENT_EMAIL': process.env.GOOGLE_CLIENT_EMAIL,
-    'GOOGLE_PRIVATE_KEY': process.env.GOOGLE_PRIVATE_KEY,
-    'GOOGLE_PROJECT_ID': process.env.GOOGLE_PROJECT_ID,
-    'OPENAI_API_KEY': process.env.OPENAI_API_KEY
+    'AI_BASE_URL': process.env.AI_BASE_URL,
+    'AI_MODEL': process.env.AI_MODEL
   }
 
   for (const [key, value] of Object.entries(envVars)) {
@@ -164,22 +171,41 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Check Google Cloud Vision API
-  if (process.env.GOOGLE_CLIENT_EMAIL && 
-      process.env.GOOGLE_PRIVATE_KEY && 
-      process.env.GOOGLE_PROJECT_ID) {
-    result.checks.apis.vision.status = 'ok'
-  } else {
-    result.checks.apis.vision.status = 'unconfigured'
-    result.recommendations.push('Configure Google Cloud Vision API for OCR features')
+  // Check Ollama AI
+  try {
+    const aiHealth = await checkAIHealth()
+    if (aiHealth.available) {
+      result.checks.apis.ai = {
+        status: 'ok',
+        details: 'Ollama server is available',
+        models: aiHealth.models
+      }
+    } else {
+      result.checks.apis.ai = {
+        status: 'unconfigured',
+        details: aiHealth.error || 'Ollama server not available'
+      }
+      result.recommendations.push('Start Ollama server and download a model (e.g., qwen2.5:7b) for AI chat and quiz generation')
+    }
+  } catch (error: any) {
+    result.checks.apis.ai = {
+      status: 'error',
+      details: `Error checking AI: ${error.message}`
+    }
   }
 
-  // Check OpenAI API
-  if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.startsWith('sk-')) {
-    result.checks.apis.openai.status = 'ok'
-  } else {
-    result.checks.apis.openai.status = 'unconfigured'
-    result.recommendations.push('Configure OpenAI API for AI chat and quiz generation')
+  // Check Tesseract.js OCR (always available)
+  try {
+    const ocrHealth = checkOCRHealth()
+    result.checks.apis.ocr = {
+      status: 'ok',
+      details: ocrHealth.details
+    }
+  } catch (error: any) {
+    result.checks.apis.ocr = {
+      status: 'ok',
+      details: 'Tesseract.js is built-in and always available'
+    }
   }
 
   // Final status determination

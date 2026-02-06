@@ -8,10 +8,14 @@ Ensure the following environment variables are set in Vercel:
 #### Required Variables
 - [ ] `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
 - [ ] `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anonymous key
-- [ ] `OPENAI_API_KEY` - OpenAI API key for AI features
-- [ ] `GOOGLE_CLIENT_EMAIL` - Google Cloud service account email
-- [ ] `GOOGLE_PRIVATE_KEY` - Google Cloud service account private key
-- [ ] `GOOGLE_PROJECT_ID` - Google Cloud project ID
+- [ ] `AI_BASE_URL` - Ollama server URL (e.g., http://your-server:11434)
+- [ ] `AI_MODEL` - Ollama model name (e.g., llama2)
+
+#### Ollama Server Setup
+- [ ] Ollama server deployed and running
+- [ ] Model downloaded (`ollama pull llama2` or your chosen model)
+- [ ] Server accessible from Vercel deployment
+- [ ] Health check passes: `curl $AI_BASE_URL/api/tags`
 
 ### 2. Security Configurations
 - [x] Security headers configured (X-Frame-Options, CSP, HSTS)
@@ -76,13 +80,14 @@ After deployment, verify:
 
 ### Runtime Errors
 - Check Vercel Runtime Logs
-- Verify API keys are valid
+- Verify Ollama server is reachable
 - Test health check endpoint
 
-### Environment Variable Issues
-For `GOOGLE_PRIVATE_KEY`, ensure proper formatting:
-- Use multiline string or escape newlines
-- Example: `"-----BEGIN PRIVATE KEY-----\nYOUR_KEY\n-----END PRIVATE KEY-----"`
+### Ollama Server Issues
+- Verify server is running: `ollama list` on server
+- Check model is available: `curl $AI_BASE_URL/api/tags`
+- Test connection: `curl -X POST $AI_BASE_URL/api/generate -H 'Content-Type: application/json' -d '{"model":"llama2","prompt":"test"}'`
+- Check firewall/network connectivity from Vercel
 
 ## 📝 Production URLs
 

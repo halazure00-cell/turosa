@@ -26,7 +26,9 @@ const results = {
 };
 
 let healthScore = 0;
-const totalChecks = 12; // Total number of checks
+// Total number of checks - Update this count when adding/removing checks
+// Current checks: 4 env vars + 2 Supabase + 2 storage + 5 database tables + Ollama = 13
+const totalChecks = 13;
 
 // Helper functions
 function pass(message) {
@@ -128,26 +130,22 @@ async function checkEnvironmentVariables() {
       'Set NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local (get from Supabase dashboard)');
   }
   
-  // Google Cloud Vision (optional)
-  const googleEmail = process.env.GOOGLE_CLIENT_EMAIL;
-  const googleKey = process.env.GOOGLE_PRIVATE_KEY;
-  const googleProject = process.env.GOOGLE_PROJECT_ID;
+  // Ollama AI (optional)
+  const aiBaseUrl = process.env.AI_BASE_URL || 'http://localhost:11434'
+  const aiModel = process.env.AI_MODEL || 'qwen2.5:7b'
   
-  if (googleEmail && googleKey && googleProject) {
-    pass('Google Cloud Vision credentials configured');
+  if (aiBaseUrl) {
+    pass('AI_BASE_URL configured (or using default)');
   } else {
-    warn('Google Cloud Vision credentials not configured',
-      'OCR features will not work. Set GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY, and GOOGLE_PROJECT_ID');
+    warn('AI_BASE_URL not configured',
+      'Will use default http://localhost:11434. Ensure Ollama is running.');
   }
   
-  // OpenAI (optional)
-  const openaiKey = process.env.OPENAI_API_KEY;
-  
-  if (openaiKey && openaiKey.startsWith('sk-')) {
-    pass('OpenAI API key configured');
+  if (aiModel) {
+    pass('AI_MODEL configured (or using default)');
   } else {
-    warn('OpenAI API key not configured',
-      'AI chat and quiz generation will not work. Set OPENAI_API_KEY');
+    warn('AI_MODEL not configured',
+      'Will use default qwen2.5:7b. Download model with: ollama pull qwen2.5:7b');
   }
 }
 
@@ -281,6 +279,37 @@ async function checkHealthEndpoint() {
   }
 }
 
+async function checkOllamaConnectivity() {
+  section('6. Ollama AI Connectivity Check');
+  
+  const aiBaseUrl = process.env.AI_BASE_URL || 'http://localhost:11434';
+  
+  try {
+    const response = await makeRequest(`${aiBaseUrl}/api/tags`, {
+      method: 'GET'
+    });
+    
+    if (response.statusCode === 200) {
+      const data = JSON.parse(response.data);
+      const models = data.models || [];
+      
+      if (models.length > 0) {
+        pass(`Ollama connected - ${models.length} model(s) available`);
+        console.log(`${colors.blue}   Models:${colors.reset} ${models.map(m => m.name).join(', ')}`);
+      } else {
+        warn('Ollama connected but no models downloaded',
+          'Download a model with: ollama pull qwen2.5:7b');
+      }
+    } else {
+      warn('Ollama server returned non-200 status',
+        'Check if Ollama is running correctly');
+    }
+  } catch (error) {
+    warn('Cannot connect to Ollama server',
+      `Install Ollama from https://ollama.com and start it. Default URL: ${aiBaseUrl}`);
+  }
+}
+
 function generateReport() {
   section('📊 Validation Summary');
   
@@ -352,6 +381,7 @@ async function main() {
   await checkStorageBuckets();
   await checkDatabaseTables();
   await checkHealthEndpoint();
+  await checkOllamaConnectivity();
   
   // Generate report
   generateReport();

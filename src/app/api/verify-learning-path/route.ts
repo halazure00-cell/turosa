@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { log, LogCategory } from '@/lib/logger'
+import { checkAIHealth } from '@/lib/ai-provider'
 
 /**
  * Learning Path Verification API
@@ -156,14 +157,14 @@ export async function POST(request: NextRequest) {
 
     // Check 6: Quiz generation possible (if chapters exist)
     if (result.checks.chaptersExist.count > 0) {
-      const openaiConfigured = !!process.env.OPENAI_API_KEY
-      result.checks.quizGeneration.passed = openaiConfigured
-      result.checks.quizGeneration.details = openaiConfigured 
-        ? 'OpenAI configured, quiz generation available'
-        : 'OpenAI not configured, quiz generation unavailable'
+      const aiHealth = await checkAIHealth()
+      result.checks.quizGeneration.passed = aiHealth.available
+      result.checks.quizGeneration.details = aiHealth.available 
+        ? 'Ollama AI configured, quiz generation available'
+        : `Ollama AI not available: ${aiHealth.error || 'Unknown error'}`
       
-      if (!openaiConfigured) {
-        result.recommendations.push('Configure OpenAI API key to enable quiz generation')
+      if (!aiHealth.available) {
+        result.recommendations.push('Start Ollama server and download a model (e.g., qwen2.5:7b) to enable quiz generation')
       }
     } else {
       result.checks.quizGeneration.passed = false

@@ -11,10 +11,11 @@ This implementation adds comprehensive testing, debugging, and monitoring capabi
 **Location:** `scripts/`
 
 #### test-setup.js
-- Validates all environment variables (Supabase, Google Cloud, OpenAI)
+- Validates all environment variables (Supabase, Ollama)
 - Tests Supabase connection and authentication
 - Checks storage buckets (book-covers, book-files)
 - Verifies database tables accessibility
+- Tests Ollama server connectivity
 - Provides health score and actionable recommendations
 - Color-coded output for easy diagnosis
 
@@ -104,8 +105,13 @@ log.upload.success(fileName, url)
 log.upload.error(fileName, error)
 
 // API calls
-log.api.call('POST', '/api/upload', 200)
-log.api.error('POST', '/api/upload', error)
+log.api.call('POST', '/api/chat', 200)
+log.api.error('POST', '/api/chat', error)
+
+// OCR processing
+log.ocr.start(fileName)
+log.ocr.success(fileName, extractedText)
+log.ocr.error(fileName, error)
 
 // General logging
 log.info(LogCategory.SYSTEM, 'System initialized')
@@ -233,7 +239,7 @@ GET /api/admin/health
   "checks": {
     "database": { "status": "ok", "details": "...", "latency": 150 },
     "storage": { "status": "ok", "buckets": [...] },
-    "apis": { "vision": {...}, "openai": {...} },
+    "apis": { "ollama": { "status": "ok", "model": "llama2" } },
     "environment": { "configured": [...], "missing": [...] }
   },
   "recommendations": [...]

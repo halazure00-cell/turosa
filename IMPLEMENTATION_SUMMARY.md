@@ -21,11 +21,11 @@ This PR successfully implements Stage 3B: OCR & Intelligence using Google Cloud 
 
 ### 1. OCR API Endpoint (`/api/ocr`)
 - ✅ POST endpoint accepting image URL or base64 encoded images
-- ✅ Google Cloud Vision integration with proper authentication
-- ✅ `documentTextDetection` for accurate dense text extraction
-- ✅ Arabic language hints (`languageHints: ['ar']`) for Kitab texts
-- ✅ Graceful error handling with clear messages when credentials are missing
+- ✅ Tesseract.js integration (client-side OCR, no external API required)
+- ✅ Arabic language support for Kitab texts
+- ✅ Graceful error handling with clear messages
 - ✅ Returns extracted text with confidence scores
+- ✅ Built-in functionality - no API credentials needed
 
 ### 2. Digitization Workspace (`/digitize/[bookId]`)
 - ✅ Client-side component with modern React hooks
@@ -58,11 +58,10 @@ This PR successfully implements Stage 3B: OCR & Intelligence using Google Cloud 
 ## Technical Highlights
 
 ### Security
-- Private keys stored as environment variables (server-side only)
-- OCR processing happens server-side
+- OCR processing happens client-side (no data sent to external servers)
 - Authentication required for saving chapters
 - Input validation on API endpoints
-- Graceful degradation when credentials are missing
+- No external API credentials required
 
 ### User Experience
 - Intuitive split-view interface
@@ -86,27 +85,14 @@ This PR successfully implements Stage 3B: OCR & Intelligence using Google Cloud 
 ✅ **Type Check:** TypeScript compilation passes  
 ✅ **Integration:** All new routes integrate properly with Next.js App Router  
 
-## What Works Without Credentials
-
-Even without Google Cloud credentials configured:
-- ✅ Application builds and runs
-- ✅ All pages render correctly
-- ✅ API returns clear error message explaining what's needed
-- ✅ No runtime crashes or unhandled errors
-- ✅ Users see helpful guidance to configure credentials
-
 ## Setup Required by User
 
-To fully enable OCR functionality, users need to:
+OCR functionality works out of the box with Tesseract.js:
 
-1. Create a Google Cloud project
-2. Enable Cloud Vision API
-3. Create a service account with Vision API permissions
-4. Download service account JSON key
-5. Add credentials to `.env.local`:
-   - `GOOGLE_CLIENT_EMAIL`
-   - `GOOGLE_PRIVATE_KEY`
-   - `GOOGLE_PROJECT_ID`
+1. No external API setup required
+2. No credentials needed
+3. Works offline after initial library load
+4. Simply upload images and extract text
 
 Complete instructions provided in `DIGITIZATION_GUIDE.md`.
 
@@ -126,16 +112,15 @@ CREATE TABLE IF NOT EXISTS public.chapters (
 
 ## Dependencies Added
 
-- `@google-cloud/vision@^5.3.4` - Official Google Cloud Vision client library
+- `tesseract.js` - Client-side OCR library with Arabic support
 
 ## Error Handling
 
 All error scenarios are handled gracefully:
-- Missing credentials → Clear error message
 - No text detected → User-friendly message
 - Upload errors → Specific error messages
 - Save errors → Alert with error details
-- Network errors → Proper error states
+- Processing errors → Proper error states
 
 ## Future Enhancements
 

@@ -10,14 +10,12 @@ export interface ConfigStatus {
     anonKey: boolean
     configured: boolean
   }
-  openai: {
-    apiKey: boolean
+  ai: {
+    baseUrl: boolean
+    model: boolean
     configured: boolean
   }
-  google: {
-    clientEmail: boolean
-    privateKey: boolean
-    projectId: boolean
+  ocr: {
     configured: boolean
   }
 }
@@ -40,26 +38,19 @@ export function checkConfiguration(): ConfigStatus {
     errors.push('NEXT_PUBLIC_SUPABASE_ANON_KEY tidak dikonfigurasi atau tidak valid')
   }
 
-  // Check OpenAI configuration (optional, for AI features)
-  const openaiKey = process.env.OPENAI_API_KEY
-  const openaiValid = !!(openaiKey && openaiKey.length > 20)
+  // Check AI configuration (optional, for AI features)
+  const aiBaseUrl = process.env.AI_BASE_URL || 'http://localhost:11434'
+  const aiModel = process.env.AI_MODEL || 'qwen2.5:7b'
   
-  if (!openaiValid) {
-    warnings.push('OPENAI_API_KEY tidak dikonfigurasi - Fitur AI chat dan quiz tidak akan berfungsi')
+  const aiBaseUrlValid = !!(aiBaseUrl && aiBaseUrl.length > 0)
+  const aiModelValid = !!(aiModel && aiModel.length > 0)
+  
+  if (!aiBaseUrlValid || !aiModelValid) {
+    warnings.push('AI_BASE_URL atau AI_MODEL tidak dikonfigurasi - Fitur AI chat dan quiz mungkin tidak berfungsi (akan menggunakan default)')
   }
 
-  // Check Google Cloud Vision configuration (optional, for OCR)
-  const googleEmail = process.env.GOOGLE_CLIENT_EMAIL
-  const googleKey = process.env.GOOGLE_PRIVATE_KEY
-  const googleProjectId = process.env.GOOGLE_PROJECT_ID
-  
-  const googleEmailValid = !!(googleEmail && googleEmail.includes('@'))
-  const googleKeyValid = !!(googleKey && googleKey.includes('BEGIN PRIVATE KEY'))
-  const googleProjectValid = !!(googleProjectId && googleProjectId.length > 0)
-  
-  if (!googleEmailValid || !googleKeyValid || !googleProjectValid) {
-    warnings.push('Google Cloud Vision API tidak dikonfigurasi lengkap - Fitur OCR tidak akan berfungsi')
-  }
+  // OCR is always configured (Tesseract.js is built-in)
+  const ocrConfigured = true
 
   const isValid = errors.length === 0
 
@@ -72,15 +63,13 @@ export function checkConfiguration(): ConfigStatus {
       anonKey: supabaseKeyValid,
       configured: supabaseUrlValid && supabaseKeyValid
     },
-    openai: {
-      apiKey: openaiValid,
-      configured: openaiValid
+    ai: {
+      baseUrl: aiBaseUrlValid,
+      model: aiModelValid,
+      configured: aiBaseUrlValid && aiModelValid
     },
-    google: {
-      clientEmail: googleEmailValid,
-      privateKey: googleKeyValid,
-      projectId: googleProjectValid,
-      configured: googleEmailValid && googleKeyValid && googleProjectValid
+    ocr: {
+      configured: ocrConfigured
     }
   }
 }
@@ -110,18 +99,16 @@ export function logConfigurationStatus() {
   console.log('Status:', status.supabase.configured ? '✅ Configured' : '❌ Not Configured')
   console.groupEnd()
 
-  // OpenAI
-  console.group('OpenAI (Optional - untuk AI features)')
-  console.log('API Key:', status.openai.apiKey ? '✅' : '⚠️')
-  console.log('Status:', status.openai.configured ? '✅ Configured' : '⚠️ Not Configured')
+  // AI (Ollama)
+  console.group('Ollama AI (Optional - untuk AI features)')
+  console.log('Base URL:', status.ai.baseUrl ? '✅' : '⚠️')
+  console.log('Model:', status.ai.model ? '✅' : '⚠️')
+  console.log('Status:', status.ai.configured ? '✅ Configured' : '⚠️ Not Configured')
   console.groupEnd()
 
-  // Google Cloud Vision
-  console.group('Google Cloud Vision (Optional - untuk OCR)')
-  console.log('Client Email:', status.google.clientEmail ? '✅' : '⚠️')
-  console.log('Private Key:', status.google.privateKey ? '✅' : '⚠️')
-  console.log('Project ID:', status.google.projectId ? '✅' : '⚠️')
-  console.log('Status:', status.google.configured ? '✅ Configured' : '⚠️ Not Configured')
+  // OCR (Tesseract.js)
+  console.group('Tesseract.js (Built-in - untuk OCR)')
+  console.log('Status:', status.ocr.configured ? '✅ Always Available' : '❌ Not Available')
   console.groupEnd()
 
   console.groupEnd()

@@ -91,11 +91,19 @@ turosa/
 - **Styling**: Tailwind CSS
 - **Icons**: Lucide React
 - **Backend**: Supabase (Auth, Database, Storage)
-- **AI**: OpenAI API (untuk chat dan quiz generation)
-- **OCR**: Google Cloud Vision API
+- **AI**: Ollama (self-hosted LLM with qwen2.5:7b)
+- **OCR**: Tesseract.js (built-in, no configuration needed)
 - **Deployment**: Vercel
 
-## 📦 Instalasi
+## 📦 Prerequisites
+
+Before installation, ensure you have:
+
+- **Node.js** 18+ and npm
+- **Supabase Account** (for backend services)
+- **Ollama** (for AI features) - [Install Guide](https://ollama.com)
+  - Download model: `ollama pull qwen2.5:7b`
+- **OCR**: Automatically included (Tesseract.js)
 
 ```bash
 # Install dependencies
@@ -118,6 +126,7 @@ Aplikasi ini telah dioptimasi dan siap untuk deployment di Vercel:
 1. **Quick Deploy**: Ikuti panduan lengkap di [DEPLOYMENT.md](DEPLOYMENT.md)
 2. **Production Checklist**: Lihat [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md)
 3. **Environment Setup**: Copy `.env.example` ke `.env.local` dan isi semua nilai
+4. **Ollama Deployment**: Lihat [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) untuk deploy Ollama di production
 
 ### Fitur Production Ready
 - ✅ Security headers (HSTS, X-Frame-Options, CSP)
@@ -126,39 +135,15 @@ Aplikasi ini telah dioptimasi dan siap untuk deployment di Vercel:
 - ✅ Health check endpoint (`/api/health`)
 - ✅ Error handling untuk production
 - ✅ Environment variable validation
+- ✅ Self-hosted AI (no API costs)
+- ✅ Built-in OCR (no external dependencies)
 
-## 🌐 Environment Variables
+## 📚 Dokumentasi
 
-### ⚠️ Masalah Upload PDF? Lihat [SETUP_GUIDE.md](SETUP_GUIDE.md) untuk solusi lengkap!
-
-### Prerequisites
-
-Sebelum menjalankan aplikasi, pastikan Anda memiliki:
-
-1. **Supabase Account**: Untuk database dan authentication
-   - `NEXT_PUBLIC_SUPABASE_URL` - URL project Supabase Anda
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Anon/Public key dari Supabase
-
-2. **Google Cloud Platform**: Untuk OCR (Google Cloud Vision API)
-   - `GOOGLE_CLIENT_EMAIL` - Service account email
-   - `GOOGLE_PRIVATE_KEY` - Service account private key
-   - `GOOGLE_PROJECT_ID` - Google Cloud project ID
-
-3. **OpenAI Account**: Untuk AI Chat dan Quiz Generation
-   - `OPENAI_API_KEY` - API key dari OpenAI
-
-### Setup Instructions
-
-1. Copy file template environment variables:
-   ```bash
-   cp .env.example .env.local
-   ```
-
-2. Isi semua nilai di file `.env.local` dengan credentials Anda
-
-3. Untuk Google Cloud Vision, pastikan service account memiliki akses ke Vision API
-
-4. Jangan commit file `.env.local` ke repository (sudah ada di `.gitignore`)
+- **[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)** - Panduan migrasi dari OpenAI/Google Cloud ke Ollama/Tesseract.js
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Panduan deployment production
+- **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Panduan setup lengkap
+- **[PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md)** - Checklist sebelum go-live
 
 ## 📝 Rencana Implementasi
 
