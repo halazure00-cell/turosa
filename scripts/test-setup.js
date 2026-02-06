@@ -26,7 +26,9 @@ const results = {
 };
 
 let healthScore = 0;
-const totalChecks = 13; // Total number of checks
+// Total number of checks - Update this count when adding/removing checks
+// Current checks: 4 env vars + 2 Supabase + 2 storage + 5 database tables + Ollama = 13
+const totalChecks = 13;
 
 // Helper functions
 function pass(message) {

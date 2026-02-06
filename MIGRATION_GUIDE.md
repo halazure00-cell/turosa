@@ -70,6 +70,14 @@ ollama serve
 
 # In another terminal, download the model
 ollama pull qwen2.5:7b
+
+# Verify available models
+ollama list
+
+# Note: If qwen2.5:7b is not available, check for alternatives:
+# - llama3.1:8b (good Arabic support)
+# - mistral:7b (faster, decent Arabic)
+# Visit https://ollama.com/library for the latest models
 ```
 
 **Alternative Models:**

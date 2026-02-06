@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { performOCRWithOptions } from '@/lib/ocr-provider'
 import { isValidUrl } from '@/lib/validation'
 
-// Request timeout in milliseconds - Tesseract.js takes longer than Cloud Vision
+// Request timeout in milliseconds
+// Tesseract.js processes images locally on the CPU, which typically takes 2-3x longer
+// than cloud-based OCR services. Increased to 60s to accommodate larger/complex images.
 const REQUEST_TIMEOUT = 60000 // 60 seconds
 
 export async function POST(request: NextRequest) {

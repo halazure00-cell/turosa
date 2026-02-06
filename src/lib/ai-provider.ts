@@ -99,7 +99,8 @@ export async function listAvailableModels(): Promise<string[]> {
 
 /**
  * Perform chat completion using Ollama
- * Uses OpenAI-compatible endpoint for easy migration
+ * Uses Ollama's OpenAI-compatible endpoint (/v1/chat/completions) for easy migration
+ * Note: This is Ollama's compatibility layer, not the actual OpenAI API
  */
 export async function chatCompletion(
   params: ChatCompletionParams
