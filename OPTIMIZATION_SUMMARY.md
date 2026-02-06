@@ -130,20 +130,23 @@ All criteria for production deployment met:
 1. Set environment variables in Vercel dashboard:
    - NEXT_PUBLIC_SUPABASE_URL
    - NEXT_PUBLIC_SUPABASE_ANON_KEY
-   - OPENAI_API_KEY
-   - GOOGLE_CLIENT_EMAIL
-   - GOOGLE_PRIVATE_KEY
-   - GOOGLE_PROJECT_ID
+   - AI_BASE_URL (Ollama server URL)
+   - AI_MODEL (e.g., llama2)
 
-2. Connect GitHub repository to Vercel
+2. Deploy Ollama server:
+   - Install Ollama on your server
+   - Pull required model: `ollama pull llama2`
+   - Ensure server is accessible from Vercel
 
-3. Deploy to production
+3. Connect GitHub repository to Vercel
 
-4. Verify deployment:
+4. Deploy to production
+
+5. Verify deployment:
    - Visit `/api/health` endpoint
    - Test authentication flow
-   - Verify OCR functionality
-   - Test AI chat features
+   - Verify OCR functionality (built-in)
+   - Test AI chat features (check Ollama connectivity)
 
 ### Post-Deployment:
 1. Monitor application logs in Vercel dashboard

@@ -111,15 +111,19 @@ curl -X POST http://localhost:3000/api/chat \
   -d '{"messages":[{"invalid":"format"}]}'
 ```
 
-3. **Success (200)**
+3. **Ollama Server Unreachable (503)**
+```bash
+# When AI_BASE_URL is not accessible
+curl -X POST http://localhost:3000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"test"}]}'
+```
+
+4. **Success (200)**
 ```json
 {
   "message": "Mubtada adalah...",
-  "usage": {
-    "prompt_tokens": 100,
-    "completion_tokens": 50,
-    "total_tokens": 150
-  }
+  "model": "llama2"
 }
 ```
 
@@ -287,7 +291,8 @@ SELECT * FROM chapters WHERE book_id = 'uuid' ORDER BY order_index;
 - [ ] Upload valid base64 image
 - [ ] Handle invalid URL
 - [ ] Handle oversized image
-- [ ] Handle timeout
+- [ ] Verify Tesseract.js processing
+- [ ] Test Arabic text extraction
 
 ### Chat Flow
 
@@ -312,9 +317,9 @@ SELECT * FROM chapters WHERE book_id = 'uuid' ORDER BY order_index;
    - RLS policy violations
 
 3. **External Service Errors**
-   - OpenAI API down
-   - Google Cloud Vision API down
-   - Invalid API keys
+   - Ollama server down/unreachable
+   - Network timeout to Ollama
+   - Model not available on Ollama server
 
 4. **Edge Cases**
    - Empty inputs
@@ -342,9 +347,9 @@ SELECT * FROM chapters WHERE book_id = 'uuid' ORDER BY order_index;
    - Lock contention
 
 3. **External Services**
-   - API call counts
-   - Token usage (OpenAI)
-   - Credit usage (Google Cloud)
+   - Ollama server health
+   - Response times
+   - Model availability
 
 ### Error Logging
 
@@ -361,7 +366,8 @@ Errors should log:
 
 - [ ] Environment variables configured
 - [ ] Database migrations applied
-- [ ] API keys validated
+- [ ] Ollama server deployed and accessible
+- [ ] AI model downloaded on Ollama server
 - [ ] Error logging configured
 - [ ] Monitoring set up
 - [ ] Backup strategy in place

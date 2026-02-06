@@ -103,21 +103,22 @@ npm run setup:storage
    - [ ] Navigate to book details
    - [ ] Click "Digitize" button
    - [ ] Upload page image
-   - [ ] Verify OCR processing starts
+   - [ ] Verify Tesseract.js loads and processes image
 
 2. **Verify Results**
-   - [ ] Check extracted text displays
+   - [ ] Check extracted Arabic text displays correctly
    - [ ] Verify ability to edit text
+   - [ ] Test with different image qualities
    - [ ] Save as chapter
    - [ ] Verify chapter appears in book
 
-### Test 5: Quiz & Discussion
-1. **Quiz Generation**
+### Test 5: AI Chat & Discussion
+1. **AI Chat (Ollama)**
    - [ ] Navigate to digitized chapter
-   - [ ] Click "Generate Quiz"
-   - [ ] Verify quiz questions display
-   - [ ] Answer questions
-   - [ ] Check scoring works
+   - [ ] Click "Tanya Ustadz Turosa" button
+   - [ ] Ask a question about the text
+   - [ ] Verify Ollama responds correctly
+   - [ ] Check response quality and relevance
 
 2. **Discussions**
    - [ ] Navigate to book/chapter
@@ -184,15 +185,15 @@ ls -la
 **Symptom:** "OCR unavailable" atau no text extracted
 
 **Diagnosis:**
-```bash
-# Check Google Cloud credentials
-npm run test:setup | grep "Google Cloud"
-```
+1. Check browser console for Tesseract.js errors
+2. Verify image quality and format
 
 **Fix:**
-1. Verify Google Cloud Vision API credentials in `.env.local`
-2. Check Google Cloud project has Vision API enabled
-3. Verify service account has correct permissions
+1. Ensure image is clear and high-resolution
+2. Try with a different image format (JPEG, PNG)
+3. Check browser compatibility with Tesseract.js
+4. Verify image contains Arabic text
+5. Clear browser cache and reload
 
 ## 📊 Performance Benchmarks
 

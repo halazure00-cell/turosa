@@ -12,14 +12,14 @@ The AI Tutor feature adds an interactive chat sidebar to the chapter reader page
 
 ### 1. Backend API (`src/app/api/chat/route.ts`)
 - **POST endpoint** at `/api/chat` for processing chat messages
-- **OpenAI Integration** using the `openai` library (gpt-4o-mini model)
+- **Ollama Integration** using local/self-hosted LLM (configurable model, default: llama2)
 - **Intelligent System Prompt** designed specifically for Kitab Kuning learning:
   - Role: "Ustadz Turosa" - expert in Kitab Kuning
   - Capabilities: Nahwu/Sharaf explanation, literal & contextual translation, fiqh/aqeedah context
   - Constraint: Pedagogical approach, always refers to chapter context
 - **Context-aware**: Receives chapter content to provide relevant answers
-- **Error Handling**: Graceful handling of missing API keys, rate limits, and invalid requests
-- **Security**: API key stored as environment variable, never exposed to client
+- **Error Handling**: Graceful handling of server connectivity issues, timeouts, and invalid requests
+- **Security**: Server URL stored as environment variable, self-hosted for data privacy
 
 ### 2. AI Chat Sidebar Component (`src/components/AIChatSidebar.tsx`)
 - **Responsive Design**: Full-screen on mobile, sidebar on desktop
@@ -76,17 +76,19 @@ The AI assistant is configured with a carefully crafted system prompt that:
 - Ensures answers are educational and respectful
 
 ### API Configuration
-- **Model**: `gpt-4o-mini` (cost-effective, fast, capable)
+- **Model**: Configurable via `AI_MODEL` environment variable (default: llama2)
+- **Server**: Self-hosted Ollama at `AI_BASE_URL`
 - **Temperature**: 0.7 (balanced creativity and accuracy)
 - **Max Tokens**: 1000 (sufficient for detailed explanations)
 - **Context**: Chapter content sent with each message
 
 ### Security Considerations
-- ✅ API key stored as environment variable (`OPENAI_API_KEY`)
+- ✅ Server URL stored as environment variable (`AI_BASE_URL`)
+- ✅ Self-hosted solution ensures data privacy (no external API calls)
 - ✅ Server-side API calls only (Next.js API routes)
 - ✅ Input validation on request body
 - ✅ Error messages don't expose sensitive information
-- ✅ Rate limiting handled gracefully
+- ✅ Timeouts handled gracefully
 
 ### User Experience
 - **Loading States**: Visual feedback during API calls
@@ -98,17 +100,23 @@ The AI assistant is configured with a carefully crafted system prompt that:
 ## 🚀 Usage
 
 ### Setup Requirements
-1. Add OpenAI API key to `.env.local`:
+1. Deploy Ollama server and add configuration to `.env.local`:
    ```env
-   OPENAI_API_KEY=your_openai_api_key_here
+   AI_BASE_URL=http://localhost:11434
+   AI_MODEL=llama2
    ```
 
-2. Install dependencies (already done):
+2. Pull the AI model on your Ollama server:
+   ```bash
+   ollama pull llama2
+   ```
+
+3. Install dependencies (already done):
    ```bash
    npm install
    ```
 
-3. Run the application:
+4. Run the application:
    ```bash
    npm run dev
    ```
@@ -166,11 +174,12 @@ The AI assistant is configured with a carefully crafted system prompt that:
 
 ## 🎨 Design Decisions
 
-### Why gpt-4o-mini?
-- Cost-effective for high-volume educational use
-- Fast response times for better UX
-- Sufficient capability for Q&A tasks
-- Balance between quality and cost
+### Why Ollama?
+- Self-hosted for complete data privacy
+- No per-request costs - ideal for high-volume educational use
+- Fast response times with local deployment
+- Freedom to choose and customize models
+- No external dependencies or API rate limits
 
 ### Why Sidebar Instead of Modal?
 - Less intrusive to reading experience
@@ -231,7 +240,7 @@ AIChatSidebar/
 
 ### API Flow
 ```
-User Input → API Call → OpenAI Processing → Response Display
+User Input → API Call → Ollama Processing → Response Display
      ↓           ↓              ↓                ↓
   Message    Context      System Prompt    Update UI
   History    Included     + User Msg       + History
