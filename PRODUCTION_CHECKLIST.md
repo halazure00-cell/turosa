@@ -86,7 +86,7 @@ After deployment, verify:
 ### Ollama Server Issues
 - Verify server is running: `ollama list` on server
 - Check model is available: `curl $AI_BASE_URL/api/tags`
-- Test connection: `curl -X POST $AI_BASE_URL/api/generate -d '{"model":"llama2","prompt":"test"}'`
+- Test connection: `curl -X POST $AI_BASE_URL/api/generate -H 'Content-Type: application/json' -d '{"model":"llama2","prompt":"test"}'`
 - Check firewall/network connectivity from Vercel
 
 ## 📝 Production URLs

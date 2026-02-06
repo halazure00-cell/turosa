@@ -87,11 +87,13 @@ ollama serve
    - Can use Docker: `docker run -d -p 11434:11434 ollama/ollama`
    - Or dedicated server with Ollama installed
    
-2. **Configure networking**
+2. **Configure networking and security**
    - Ensure server is accessible from Vercel
    - Use HTTPS for production (reverse proxy with nginx/caddy)
    - Set appropriate firewall rules
-
+   - **Important**: Implement authentication or use VPN/private networking to prevent unauthorized access
+   - Consider rate limiting to prevent abuse
+   
 3. **Update Environment Variables**
    ```
    AI_BASE_URL=https://your-ollama-server.com:11434
