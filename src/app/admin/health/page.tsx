@@ -407,9 +407,6 @@ ${healthData.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
                     </div>
                   </div>
                 </div>
-                    )}
-                  </div>
-                </div>
               )}
             </div>
 
