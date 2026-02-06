@@ -223,8 +223,78 @@ Dikembangkan dengan ❤️ untuk kemudahan pembelajaran Kitab Kuning.
 ## 📚 Documentation
 
 - **[Setup Guide - Panduan Lengkap Setup](SETUP_GUIDE.md)** - 🔥 **BACA INI JIKA UPLOAD PDF GAGAL!**
+- **[Testing Guide - Comprehensive Testing](TESTING_GUIDE.md)** - 🧪 **Testing & troubleshooting guide**
+- **[Learning Path - User Journey](LEARNING_PATH.md)** - 📖 **Complete learning experience documentation**
 - [Phase 3 Implementation](IMPLEMENTATION_SUMMARY.md) - OCR & Digitization
 - [Phase 4 Implementation](PHASE4_IMPLEMENTATION.md) - Interactive Reader & Progress Tracking
 - [Digitization Guide](DIGITIZATION_GUIDE.md) - User guide for digitizing books
 - [Deployment Guide](DEPLOYMENT.md) - Deploy to Vercel
 - [Production Checklist](PRODUCTION_CHECKLIST.md) - Pre-deployment checklist
+
+## 🧪 Quick Start Testing
+
+### Validate Your Setup
+```bash
+# Run comprehensive health check
+npm run test:setup
+
+# Verify database schema
+npm run verify:database
+
+# Storage setup guide
+npm run setup:storage
+
+# Generate test data (reference)
+npm run generate:test-data
+```
+
+### Health Dashboard
+Access real-time system health at `/admin/health`:
+- Database connection status
+- Storage buckets verification
+- API credentials check
+- Configuration completeness
+- Actionable recommendations
+
+### Testing Scripts
+All testing scripts available via npm:
+- `npm run test:setup` - Environment validation & health check
+- `npm run verify:database` - Database schema verification
+- `npm run setup:storage` - Storage bucket setup guide
+- `npm run generate:test-data` - Test data generator reference
+- `npm run health` - Alias for test:setup
+
+## 🔧 Troubleshooting
+
+### Upload PDF Fails?
+1. Run `npm run test:setup` to check configuration
+2. Visit `/admin/health` for detailed diagnostics
+3. Check [TESTING_GUIDE.md](TESTING_GUIDE.md) for solutions
+4. Verify Supabase credentials in `.env.local`
+5. Ensure storage buckets exist in Supabase Dashboard
+
+### Common Issues
+
+#### "Invalid API key" Error
+```bash
+# Check environment variables
+npm run test:setup
+
+# Expected: All SUPABASE env vars should be configured
+# If not, update .env.local and restart: npm run dev
+```
+
+#### Database Table Missing
+```bash
+# Verify database
+npm run verify:database
+
+# Create missing tables via Supabase migrations
+```
+
+#### OCR Not Working
+- Verify Google Cloud Vision credentials configured
+- Check API is enabled in Google Cloud Console
+- See [TESTING_GUIDE.md](TESTING_GUIDE.md) for details
+
+See **[TESTING_GUIDE.md](TESTING_GUIDE.md)** for comprehensive troubleshooting guide.

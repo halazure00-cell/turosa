@@ -1,0 +1,643 @@
+'use client'
+
+import { useState, useRef, ChangeEvent, FormEvent, useEffect } from 'react'
+import { Upload as UploadIcon, FileText, Image, AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
+import { supabase, isSupabaseConfigured, validateSupabaseConnection } from '@/lib/supabase'
+import { toast } from 'sonner'
+import { log, LogCategory } from '@/lib/logger'
+import { handleError } from '@/lib/error-handler'
+
+type UploadStep = 'idle' | 'validating' | 'uploading-cover' | 'uploading-pdf' | 'saving-metadata' | 'complete' | 'error'
+
+export default function UploadPage() {
+  const [title, setTitle] = useState('')
+  const [author, setAuthor] = useState('')
+  const [category, setCategory] = useState('')
+  const [description, setDescription] = useState('')
+  const [coverFile, setCoverFile] = useState<File | null>(null)
+  const [pdfFile, setPdfFile] = useState<File | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [uploadSuccess, setUploadSuccess] = useState(false)
+  const [error, setError] = useState('')
+  const [configError, setConfigError] = useState<string | null>(null)
+  const [currentStep, setCurrentStep] = useState<UploadStep>('idle')
+  const [uploadedBookId, setUploadedBookId] = useState<string | null>(null)
+
+  const coverInputRef = useRef<HTMLInputElement>(null)
+  const pdfInputRef = useRef<HTMLInputElement>(null)
+
+  // Check Supabase configuration on mount
+  useEffect(() => {
+    const checkConfig = async () => {
+      log.info(LogCategory.SYSTEM, 'Checking Supabase configuration')
+      
+      if (!isSupabaseConfigured()) {
+        const errorMsg = 'Aplikasi belum dikonfigurasi dengan benar. Environment variables Supabase belum diatur.'
+        setConfigError(errorMsg)
+        log.error(LogCategory.SYSTEM, 'Supabase not configured', undefined, { errorMsg })
+        return
+      }
+      
+      // Validate connection
+      const { isValid, error: validationError } = await validateSupabaseConnection()
+      if (!isValid) {
+        setConfigError(validationError || 'Tidak dapat terhubung ke Supabase')
+        log.error(LogCategory.SYSTEM, 'Supabase connection validation failed', undefined, { validationError })
+      } else {
+        log.info(LogCategory.SYSTEM, 'Supabase configuration valid')
+      }
+    }
+    
+    checkConfig()
+  }, [])
+
+  const handleCoverChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0]
+      log.info(LogCategory.UPLOAD, 'Cover file selected', {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type
+      })
+      setCoverFile(file)
+    }
+  }
+
+  const handlePdfChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0]
+      log.info(LogCategory.UPLOAD, 'PDF file selected', {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type
+      })
+      setPdfFile(file)
+    }
+  }
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setUploadSuccess(false)
+    setCurrentStep('validating')
+
+    log.info(LogCategory.UPLOAD, 'Upload process started', {
+      title,
+      author,
+      category,
+      hasCover: !!coverFile,
+      hasPdf: !!pdfFile
+    })
+
+    // Check configuration first
+    if (!isSupabaseConfigured()) {
+      const errorMsg = 'Sistem belum dikonfigurasi. Hubungi administrator untuk mengatur credentials Supabase.'
+      setError(errorMsg)
+      setCurrentStep('error')
+      toast.error(errorMsg)
+      log.error(LogCategory.UPLOAD, 'Upload failed: Supabase not configured')
+      return
+    }
+
+    // Validate connection before upload
+    const { isValid, error: validationError } = await validateSupabaseConnection()
+    if (!isValid) {
+      const errorMsg = validationError || 'Tidak dapat terhubung ke server. Periksa konfigurasi.'
+      setError(errorMsg)
+      setCurrentStep('error')
+      toast.error(errorMsg)
+      log.error(LogCategory.UPLOAD, 'Upload failed: Connection validation failed', undefined, { validationError })
+      return
+    }
+
+    // Validation
+    if (!title.trim()) {
+      const errorMsg = 'Judul kitab harus diisi'
+      setError(errorMsg)
+      setCurrentStep('error')
+      toast.error(errorMsg)
+      log.warn(LogCategory.UPLOAD, 'Upload validation failed: Title missing')
+      return
+    }
+
+    if (!pdfFile) {
+      const errorMsg = 'File PDF kitab harus dipilih'
+      setError(errorMsg)
+      setCurrentStep('error')
+      toast.error(errorMsg)
+      log.warn(LogCategory.UPLOAD, 'Upload validation failed: PDF file missing')
+      return
+    }
+
+    // Validate file size
+    const maxPdfSize = 50 * 1024 * 1024 // 50MB
+    const maxCoverSize = 5 * 1024 * 1024 // 5MB
+
+    if (pdfFile.size > maxPdfSize) {
+      const errorMsg = 'Ukuran file PDF terlalu besar (maksimal 50MB)'
+      setError(errorMsg)
+      setCurrentStep('error')
+      toast.error(errorMsg)
+      log.warn(LogCategory.UPLOAD, 'Upload validation failed: PDF too large', { size: pdfFile.size })
+      return
+    }
+
+    if (coverFile && coverFile.size > maxCoverSize) {
+      const errorMsg = 'Ukuran cover terlalu besar (maksimal 5MB)'
+      setError(errorMsg)
+      setCurrentStep('error')
+      toast.error(errorMsg)
+      log.warn(LogCategory.UPLOAD, 'Upload validation failed: Cover too large', { size: coverFile.size })
+      return
+    }
+
+    setIsLoading(true)
+
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        const errorMsg = 'Anda harus login terlebih dahulu'
+        setError(errorMsg)
+        setCurrentStep('error')
+        toast.error(errorMsg)
+        setIsLoading(false)
+        log.error(LogCategory.UPLOAD, 'Upload failed: User not authenticated')
+        return
+      }
+
+      log.info(LogCategory.UPLOAD, 'User authenticated', { userId: user.id })
+
+      let coverImageUrl = null
+      let pdfUrl = null
+
+      // Upload cover image if provided
+      if (coverFile) {
+        setCurrentStep('uploading-cover')
+        log.upload.start(coverFile.name, coverFile.size)
+        
+        const coverFileName = `${Date.now()}_${coverFile.name}`
+        const { data: coverData, error: coverError } = await supabase.storage
+          .from('book-covers')
+          .upload(coverFileName, coverFile)
+
+        if (coverError) {
+          const appError = handleError(coverError, 'Cover upload')
+          setError(appError.userMessage)
+          setCurrentStep('error')
+          toast.error(appError.userMessage)
+          setIsLoading(false)
+          log.upload.error(coverFile.name, coverError)
+          return
+        }
+
+        // Get public URL for cover
+        const { data: { publicUrl } } = supabase.storage
+          .from('book-covers')
+          .getPublicUrl(coverFileName)
+        
+        coverImageUrl = publicUrl
+        log.upload.success(coverFile.name, coverImageUrl)
+      }
+
+      // Upload PDF file
+      setCurrentStep('uploading-pdf')
+      log.upload.start(pdfFile.name, pdfFile.size)
+      
+      const pdfFileName = `${Date.now()}_${pdfFile.name}`
+      const { data: pdfData, error: pdfError } = await supabase.storage
+        .from('book-files')
+        .upload(pdfFileName, pdfFile)
+
+      if (pdfError) {
+        const appError = handleError(pdfError, 'PDF upload')
+        setError(appError.userMessage)
+        setCurrentStep('error')
+        toast.error(appError.userMessage)
+        setIsLoading(false)
+        log.upload.error(pdfFile.name, pdfError)
+        return
+      }
+
+      // Get signed URL for PDF (since it's private) - valid for 1 year
+      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+        .from('book-files')
+        .createSignedUrl(pdfFileName, 31536000) // 1 year in seconds
+      
+      if (signedUrlError) {
+        const appError = handleError(signedUrlError, 'PDF URL generation')
+        setError(appError.userMessage)
+        setCurrentStep('error')
+        toast.error(appError.userMessage)
+        setIsLoading(false)
+        log.error(LogCategory.UPLOAD, 'Failed to create signed URL', signedUrlError)
+        return
+      }
+
+      pdfUrl = signedUrlData.signedUrl
+      log.upload.success(pdfFile.name, pdfUrl)
+
+      // Insert book metadata into database
+      setCurrentStep('saving-metadata')
+      log.info(LogCategory.UPLOAD, 'Saving book metadata to database')
+      
+      const { data: bookData, error: dbError } = await supabase
+        .from('books')
+        .insert({
+          title: title.trim(),
+          author: author.trim() || null,
+          description: description.trim() || null,
+          category: category || null,
+          pdf_url: pdfUrl,
+          cover_image_url: coverImageUrl,
+          uploader_id: user.id
+        })
+        .select()
+        .single()
+
+      if (dbError) {
+        const appError = handleError(dbError, 'Database save')
+        setError(appError.userMessage)
+        setCurrentStep('error')
+        toast.error(appError.userMessage)
+        setIsLoading(false)
+        log.error(LogCategory.UPLOAD, 'Failed to save book metadata', dbError)
+        return
+      }
+
+      // Success
+      setCurrentStep('complete')
+      setUploadSuccess(true)
+      setUploadedBookId(bookData?.id)
+      toast.success('Upload berhasil! Kitab telah ditambahkan ke perpustakaan.')
+      
+      log.info(LogCategory.UPLOAD, 'Upload completed successfully', {
+        bookId: bookData?.id,
+        title,
+        hasCover: !!coverImageUrl,
+        pdfSize: pdfFile.size
+      })
+      
+      // Reset form
+      setTitle('')
+      setAuthor('')
+      setCategory('')
+      setDescription('')
+      setCoverFile(null)
+      setPdfFile(null)
+      if (coverInputRef.current) coverInputRef.current.value = ''
+      if (pdfInputRef.current) pdfInputRef.current.value = ''
+
+    } catch (err: any) {
+      const appError = handleError(err, 'Upload process')
+      setError(appError.userMessage)
+      setCurrentStep('error')
+      toast.error(appError.userMessage)
+      log.error(LogCategory.UPLOAD, 'Upload process failed', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+        return
+      }
+
+      let coverImageUrl = null
+      let pdfUrl = null
+
+      // Upload cover image if provided
+      if (coverFile) {
+        const coverFileName = `${Date.now()}_${coverFile.name}`
+        const { data: coverData, error: coverError } = await supabase.storage
+          .from('book-covers')
+          .upload(coverFileName, coverFile)
+
+        if (coverError) {
+          // Provide more helpful error messages
+          if (coverError.message.includes('Invalid API key') || coverError.message.includes('JWT')) {
+            throw new Error('Konfigurasi API tidak valid. Hubungi administrator untuk memperbaiki SUPABASE credentials.')
+          }
+          throw new Error(`Gagal upload cover: ${coverError.message}`)
+        }
+
+        // Get public URL for cover
+        const { data: { publicUrl } } = supabase.storage
+          .from('book-covers')
+          .getPublicUrl(coverFileName)
+        
+        coverImageUrl = publicUrl
+      }
+
+      // Upload PDF file
+      const pdfFileName = `${Date.now()}_${pdfFile.name}`
+      const { data: pdfData, error: pdfError } = await supabase.storage
+        .from('book-files')
+        .upload(pdfFileName, pdfFile)
+
+      if (pdfError) {
+        // Provide more helpful error messages
+        if (pdfError.message.includes('Invalid API key') || pdfError.message.includes('JWT') || pdfError.message.includes('invalid')) {
+          throw new Error('Konfigurasi API tidak valid. Hubungi administrator untuk memperbaiki credentials Supabase (NEXT_PUBLIC_SUPABASE_URL dan NEXT_PUBLIC_SUPABASE_ANON_KEY).')
+        }
+        if (pdfError.message.includes('row-level security')) {
+          throw new Error('Akses ditolak. Pastikan Anda sudah login dan memiliki izin untuk upload.')
+        }
+        throw new Error(`Gagal upload PDF: ${pdfError.message}`)
+      }
+
+      // Get signed URL for PDF (since it's private) - valid for 1 year
+      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+        .from('book-files')
+        .createSignedUrl(pdfFileName, 31536000) // 1 year in seconds
+      
+      if (signedUrlError) {
+        throw new Error(`Gagal membuat URL PDF: ${signedUrlError.message}`)
+      }
+
+      pdfUrl = signedUrlData.signedUrl
+
+      // Insert book metadata into database
+      const { error: dbError } = await supabase
+        .from('books')
+        .insert({
+          title: title.trim(),
+          author: author.trim() || null,
+          description: description.trim() || null,
+          category: category || null,
+          pdf_url: pdfUrl,
+          cover_image_url: coverImageUrl,
+          uploader_id: user.id
+        })
+
+      if (dbError) {
+        throw new Error(`Gagal menyimpan data: ${dbError.message}`)
+      }
+
+      // Success
+      setUploadSuccess(true)
+      toast.success('Upload berhasil! Kitab telah ditambahkan ke perpustakaan.')
+      
+      // Reset form
+      setTitle('')
+      setAuthor('')
+      setCategory('')
+      setDescription('')
+      setCoverFile(null)
+      setPdfFile(null)
+      if (coverInputRef.current) coverInputRef.current.value = ''
+      if (pdfInputRef.current) pdfInputRef.current.value = ''
+
+    } catch (err: any) {
+      const errorMessage = err.message || 'Terjadi kesalahan saat upload'
+      setError(errorMessage)
+      toast.error(errorMessage)
+      console.error('Upload error:', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-secondary-50 to-white">
+      <div className="container mx-auto px-4 py-6 lg:py-8">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-3xl lg:text-4xl font-bold text-accent-700 mb-2">
+            Upload Kitab
+          </h1>
+          <p className="text-accent">
+            Berkontribusi dengan mengunggah Kitab Kuning untuk koleksi digital
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+          {/* Configuration Error Message */}
+          {configError && (
+            <div className="card p-6 mb-6 border-2 border-red-300 bg-red-50 animate-slide-down">
+              <div className="flex gap-3">
+                <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-red-900 mb-2">⚠️ Konfigurasi Sistem Tidak Lengkap</p>
+                  <p className="text-sm text-red-800 mb-3">{configError}</p>
+                  <div className="bg-red-100 p-4 rounded-lg">
+                    <p className="text-sm font-semibold text-red-900 mb-2">Panduan untuk Administrator:</p>
+                    <ol className="text-sm text-red-800 space-y-2 list-decimal list-inside">
+                      <li>Buat project di <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="underline font-semibold">Supabase</a></li>
+                      <li>Dapatkan URL dan Anon Key dari Dashboard Supabase</li>
+                      <li>Set environment variables berikut:
+                        <ul className="ml-6 mt-1 space-y-1 list-disc list-inside">
+                          <li><code className="bg-red-200 px-1 rounded">NEXT_PUBLIC_SUPABASE_URL</code></li>
+                          <li><code className="bg-red-200 px-1 rounded">NEXT_PUBLIC_SUPABASE_ANON_KEY</code></li>
+                        </ul>
+                      </li>
+                      <li>Restart aplikasi setelah konfigurasi</li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Success Message */}
+          {uploadSuccess && (
+            <div className="card p-4 mb-6 border-2 border-green-200 bg-green-50 animate-slide-down">
+              <div className="flex gap-3">
+                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-green-800 mb-1">Upload Berhasil!</p>
+                  <p className="text-sm text-green-700">Kitab telah ditambahkan ke perpustakaan.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {error && (
+            <div className="card p-4 mb-6 border-2 border-red-200 bg-red-50 animate-slide-down">
+              <div className="flex gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-red-800">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Upload Areas */}
+          <div className="grid sm:grid-cols-2 gap-4 mb-6">
+            {/* Cover Image Upload */}
+            <div className="card p-6">
+              <h3 className="text-sm font-semibold text-accent-700 mb-3">Cover Kitab (Opsional)</h3>
+              <div className="border-2 border-dashed border-secondary-200 rounded-xl p-6 text-center hover:border-primary transition-colors">
+                <div className="w-12 h-12 rounded-xl bg-primary-50 flex items-center justify-center mx-auto mb-3">
+                  <Image className="w-6 h-6 text-primary" />
+                </div>
+                <p className="text-sm text-accent mb-3">
+                  {coverFile ? (
+                    <span className="text-primary font-medium">{coverFile.name}</span>
+                  ) : (
+                    'JPEG/PNG (Max 5MB)'
+                  )}
+                </p>
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png"
+                  onChange={handleCoverChange}
+                  className="hidden"
+                  id="cover-upload"
+                />
+                <label
+                  htmlFor="cover-upload"
+                  className="btn-secondary text-sm cursor-pointer"
+                >
+                  Pilih Cover
+                </label>
+              </div>
+            </div>
+
+            {/* PDF File Upload */}
+            <div className="card p-6">
+              <h3 className="text-sm font-semibold text-accent-700 mb-3">File Kitab (PDF) *</h3>
+              <div className="border-2 border-dashed border-secondary-200 rounded-xl p-6 text-center hover:border-primary transition-colors">
+                <div className="w-12 h-12 rounded-xl bg-primary-50 flex items-center justify-center mx-auto mb-3">
+                  <FileText className="w-6 h-6 text-primary" />
+                </div>
+                <p className="text-sm text-accent mb-3">
+                  {pdfFile ? (
+                    <span className="text-primary font-medium">{pdfFile.name}</span>
+                  ) : (
+                    'PDF (Max 50MB)'
+                  )}
+                </p>
+                <input
+                  ref={pdfInputRef}
+                  type="file"
+                  accept="application/pdf"
+                  onChange={handlePdfChange}
+                  className="hidden"
+                  id="pdf-upload"
+                />
+                <label
+                  htmlFor="pdf-upload"
+                  className="btn-secondary text-sm cursor-pointer"
+                >
+                  Pilih File PDF
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Metadata Form */}
+          <div className="card p-6 mb-6">
+            <h2 className="text-xl font-bold text-accent-700 mb-6">Informasi Kitab</h2>
+            
+            <div className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-accent-700 mb-2">
+                  Judul Kitab *
+                </label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="input w-full"
+                  placeholder="Contoh: Fathul Qarib"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-accent-700 mb-2">
+                  Pengarang
+                </label>
+                <input
+                  type="text"
+                  value={author}
+                  onChange={(e) => setAuthor(e.target.value)}
+                  className="input w-full"
+                  placeholder="Nama pengarang"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-accent-700 mb-2">
+                  Kategori
+                </label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="input w-full"
+                >
+                  <option value="">Pilih kategori</option>
+                  <option value="Fiqih">Fiqih</option>
+                  <option value="Akidah">Akidah</option>
+                  <option value="Tafsir">Tafsir</option>
+                  <option value="Hadits">Hadits</option>
+                  <option value="Nahwu">Nahwu</option>
+                  <option value="Sharaf">Sharaf</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-accent-700 mb-2">
+                  Deskripsi
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={4}
+                  className="input w-full"
+                  placeholder="Deskripsi singkat tentang kitab..."
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Info Box */}
+          <div className="card p-4 mb-6 border-2 border-blue-200 bg-blue-50">
+            <div className="flex gap-3">
+              <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-blue-800">
+                <p className="font-semibold mb-2">Panduan Upload:</p>
+                <ul className="space-y-1">
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 mt-0.5">•</span>
+                    <span>Pastikan file dalam kondisi yang jelas dan dapat dibaca</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 mt-0.5">•</span>
+                    <span>Lengkapi semua informasi kitab dengan akurat</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 mt-0.5">•</span>
+                    <span>File akan direview sebelum dipublikasikan</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="btn-primary w-full text-base py-4 shadow-medium hover:shadow-elevated"
+          >
+            {isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Mengupload...</span>
+              </span>
+            ) : (
+              <span className="flex items-center justify-center gap-2">
+                <UploadIcon className="w-5 h-5" />
+                <span>Upload Kitab</span>
+              </span>
+            )}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
