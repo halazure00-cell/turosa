@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { chatCompletion, checkAIHealth } from '@/lib/ai-provider'
+import { getProviderManager } from '@/lib/ai-providers'
 import { sanitizeString, isNonEmptyArray } from '@/lib/validation'
 
 // Request timeout in milliseconds
@@ -11,13 +11,16 @@ const MAX_MESSAGE_LENGTH = 2000
 
 export async function POST(request: NextRequest) {
   try {
-    // Validate AI provider availability
-    const healthCheck = await checkAIHealth()
-    if (!healthCheck.available) {
+    // Get provider manager
+    const manager = getProviderManager()
+    
+    // Check if any provider is available
+    const activeProvider = await manager.getActiveProvider()
+    if (!activeProvider) {
       return NextResponse.json(
         {
           error: 'Layanan AI tidak tersedia',
-          message: 'Layanan chat AI sedang tidak tersedia saat ini'
+          message: 'Tidak ada layanan AI yang tersedia. Silakan konfigurasi OpenRouter API key atau jalankan Ollama server.'
         },
         { status: 503 }
       )
@@ -103,7 +106,7 @@ Prinsip menjawab:
     ]
 
     // Call AI provider with timeout
-    const completionPromise = chatCompletion({
+    const completionPromise = manager.chatCompletion({
       messages: chatMessages,
       temperature: 0.7,
       maxTokens: 1000,
@@ -119,13 +122,15 @@ Prinsip menjawab:
       throw new Error('Invalid response from AI provider')
     }
 
-    const completion = result as { message: string; model?: string }
+    const completion = result as { message: string; model?: string; provider?: string }
     const assistantMessage = completion.message || 'Maaf, saya tidak dapat memberikan jawaban.'
     const model = completion.model || 'unknown'
+    const provider = completion.provider || 'unknown'
 
     return NextResponse.json({
       message: assistantMessage,
       model: model,
+      provider: provider,
     })
   } catch (error: any) {
     // Log error only in development
