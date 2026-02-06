@@ -36,8 +36,13 @@ interface HealthData {
     apis: {
       ai: { 
         status: 'ok' | 'unconfigured' | 'error'
+        mode?: string
+        providers?: Array<{
+          type: string
+          available: boolean
+          models?: string[]
+        }>
         details?: string
-        models?: string[]
       }
       ocr: { 
         status: 'ok'
@@ -98,6 +103,10 @@ export default function AdminHealthPage() {
   const copyToClipboard = () => {
     if (!healthData) return
     
+    const aiProviders = healthData.checks.apis.ai.providers 
+      ? healthData.checks.apis.ai.providers.map(p => `  - ${p.type}: ${p.available ? 'available' : 'unavailable'}`).join('\n')
+      : `  - Status: ${healthData.checks.apis.ai.status}`
+    
     const report = `Turosa Health Report
 Generated: ${healthData.timestamp}
 Overall Status: ${healthData.status.toUpperCase()}
@@ -109,7 +118,8 @@ Storage: ${healthData.checks.storage.status}
 ${healthData.checks.storage.buckets.map(b => `- ${b.name}: ${b.accessible ? 'OK' : 'ERROR'}`).join('\n')}
 
 APIs:
-- Ollama AI: ${healthData.checks.apis.ai.status}
+- AI Providers (Mode: ${healthData.checks.apis.ai.mode || 'unknown'}):
+${aiProviders}
 - Tesseract.js OCR: ${healthData.checks.apis.ocr.status}
 
 Environment:
@@ -332,14 +342,15 @@ ${healthData.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
               >
                 <div className="flex items-center gap-3">
                   <Cloud className="w-5 h-5 text-primary" />
-                  <span className="font-semibold">External APIs</span>
+                  <span className="font-semibold">AI Providers &amp; APIs</span>
                 </div>
                 {expandedSections.apis ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
               </button>
               
               {expandedSections.apis && (
                 <div className="p-4 border-t border-secondary-200 bg-secondary-50">
-                  <div className="space-y-2">
+                  <div className="space-y-3">
+                    {/* OCR Status */}
                     <div className="flex items-center justify-between p-2 bg-white rounded">
                       <span className="text-sm font-medium">Tesseract.js (OCR)</span>
                       <div className="flex items-center gap-2">
@@ -347,24 +358,55 @@ ${healthData.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
                         <span className="text-xs">{healthData.checks.apis.ocr.status}</span>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between p-2 bg-white rounded">
-                      <span className="text-sm font-medium">Ollama AI (Chat &amp; Quiz)</span>
-                      <div className="flex items-center gap-2">
-                        {getStatusIcon(healthData.checks.apis.ai.status)}
-                        <span className="text-xs">{healthData.checks.apis.ai.status}</span>
+                    
+                    {/* AI Providers */}
+                    <div className="p-3 bg-white rounded border border-secondary-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold">AI Providers</span>
+                        {healthData.checks.apis.ai.mode && (
+                          <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                            Mode: {healthData.checks.apis.ai.mode}
+                          </span>
+                        )}
                       </div>
-                    </div>
-                    {healthData.checks.apis.ai.models && healthData.checks.apis.ai.models.length > 0 && (
-                      <div className="p-2 bg-blue-50 rounded">
-                        <p className="text-xs font-semibold text-blue-900 mb-1">Available Models:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {healthData.checks.apis.ai.models.map((model) => (
-                            <span key={model} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                              {model}
-                            </span>
+                      
+                      {healthData.checks.apis.ai.providers && healthData.checks.apis.ai.providers.length > 0 ? (
+                        <div className="space-y-2">
+                          {healthData.checks.apis.ai.providers.map((provider) => (
+                            <div key={provider.type} className="flex items-center justify-between p-2 bg-secondary-50 rounded">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium capitalize">{provider.type}</span>
+                                {provider.models && provider.models.length > 0 && (
+                                  <span className="text-xs text-accent">
+                                    ({provider.models.length} models)
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {getStatusIcon(provider.available ? 'ok' : 'error')}
+                                <span className="text-xs">
+                                  {provider.available ? 'available' : 'unavailable'}
+                                </span>
+                              </div>
+                            </div>
                           ))}
                         </div>
-                      </div>
+                      ) : (
+                        <div className="flex items-center justify-between p-2 bg-secondary-50 rounded">
+                          <span className="text-sm">AI Status</span>
+                          <div className="flex items-center gap-2">
+                            {getStatusIcon(healthData.checks.apis.ai.status)}
+                            <span className="text-xs">{healthData.checks.apis.ai.status}</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {healthData.checks.apis.ai.details && (
+                        <p className="text-xs text-accent mt-2">{healthData.checks.apis.ai.details}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
                     )}
                   </div>
                 </div>
