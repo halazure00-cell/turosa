@@ -1,27 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ImageAnnotatorClient } from '@google-cloud/vision'
+import { performOCRWithOptions } from '@/lib/ocr-provider'
 import { isValidUrl } from '@/lib/validation'
 
-// Request timeout in milliseconds
-const REQUEST_TIMEOUT = 30000 // 30 seconds
+// Request timeout in milliseconds - Tesseract.js takes longer than Cloud Vision
+const REQUEST_TIMEOUT = 60000 // 60 seconds
 
 export async function POST(request: NextRequest) {
   try {
-    // Validate Google Cloud credentials
-    const clientEmail = process.env.GOOGLE_CLIENT_EMAIL
-    const privateKey = process.env.GOOGLE_PRIVATE_KEY
-    const projectId = process.env.GOOGLE_PROJECT_ID
-
-    if (!clientEmail || !privateKey || !projectId) {
-      return NextResponse.json(
-        {
-          error: 'Google Cloud Credentials belum dikonfigurasi',
-          message: 'Layanan OCR tidak tersedia saat ini'
-        },
-        { status: 503 }
-      )
-    }
-
+    // Tesseract.js is built-in, no credentials needed
     // Parse the request body with timeout
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('Request timeout')), REQUEST_TIMEOUT)
@@ -30,9 +16,9 @@ export async function POST(request: NextRequest) {
     const body = await Promise.race([
       request.json(),
       timeoutPromise
-    ]) as { imageUrl?: string; imageBase64?: string }
+    ]) as { imageUrl?: string; imageBase64?: string; multiLang?: boolean; language?: string }
 
-    const { imageUrl, imageBase64 } = body
+    const { imageUrl, imageBase64, multiLang = false, language = 'ara' } = body
 
     // Validate input
     if (!imageUrl && !imageBase64) {
@@ -67,55 +53,44 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Initialize Google Cloud Vision client with credentials
-    const client = new ImageAnnotatorClient({
-      credentials: {
-        client_email: clientEmail,
-        private_key: privateKey.replace(/\\n/g, '\n'), // Handle escaped newlines
-      },
-      projectId: projectId,
-    })
+    // Determine image source for Tesseract.js
+    const imageSource = imageUrl || imageBase64
 
-    // Prepare the request for Vision API
-    const imageSource = imageUrl
-      ? { source: { imageUri: imageUrl } }
-      : { content: imageBase64 }
-
-    // Perform OCR using documentTextDetection for better results on dense text
-    const [result] = await Promise.race([
-      client.documentTextDetection({
-        image: imageSource,
-        imageContext: {
-          languageHints: ['ar'], // Arabic language for Kitab texts
+    if (!imageSource) {
+      return NextResponse.json(
+        { 
+          error: 'Parameter tidak valid',
+          message: 'imageUrl atau imageBase64 harus disediakan' 
         },
-      }),
+        { status: 400 }
+      )
+    }
+
+    // Perform OCR using Tesseract.js
+    const result = await Promise.race([
+      performOCRWithOptions(imageSource, { language, multiLang }),
       timeoutPromise
     ]) as any
 
-    const detections = result.textAnnotations
-    const fullTextDetection = result.fullTextAnnotation
-
-    if (!detections || detections.length === 0) {
+    if (!result || !result.text) {
       return NextResponse.json(
         {
           text: '',
           message: 'Tidak ada teks yang terdeteksi pada gambar',
           confidence: null,
+          language: multiLang ? 'ara+ind' : language,
+          detectionCount: 0
         },
         { status: 200 }
       )
     }
 
-    // Extract the detected text
-    // The first annotation contains all detected text
-    const extractedText = detections[0]?.description || ''
-
-    // Return the extracted text and additional metadata
+    // Return the extracted text and metadata
     return NextResponse.json({
-      text: extractedText,
-      confidence: fullTextDetection?.pages?.[0]?.confidence || null,
-      language: 'ar',
-      detectionCount: detections.length,
+      text: result.text,
+      confidence: result.confidence,
+      language: result.language,
+      detectionCount: result.detectionCount,
     })
   } catch (error: any) {
     // Log error only in development

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import OpenAI from 'openai'
+import { chatCompletion, checkAIHealth } from '@/lib/ai-provider'
 import { sanitizeString, isNonEmptyArray } from '@/lib/validation'
 
 // Request timeout in milliseconds
@@ -11,9 +11,9 @@ const MAX_MESSAGE_LENGTH = 2000
 
 export async function POST(request: NextRequest) {
   try {
-    // Validate OpenAI API Key
-    const apiKey = process.env.OPENAI_API_KEY
-    if (!apiKey) {
+    // Validate AI provider availability
+    const healthCheck = await checkAIHealth()
+    if (!healthCheck.available) {
       return NextResponse.json(
         {
           error: 'Layanan AI tidak tersedia',
@@ -70,11 +70,6 @@ export async function POST(request: NextRequest) {
       ? sanitizeString(context).substring(0, MAX_CONTEXT_LENGTH)
       : ''
 
-    // Initialize OpenAI client
-    const openai = new OpenAI({
-      apiKey: apiKey,
-    })
-
     // System prompt engineering - "Ustadz Turosa"
     const systemPrompt = `Anda adalah Ustadz Turosa, asisten belajar Kitab Kuning yang ahli dalam gramatika Arab (Nahwu & Sharaf), terjemahan, dan penjelasan konteks fiqih/akidah.
 
@@ -98,31 +93,36 @@ Prinsip menjawab:
 - Jika tidak yakin, akui keterbatasan dan sarankan rujukan lebih lanjut
 - Gunakan istilah pesantren yang familiar (seperti mubtada', khabar, fa'il, dll)`
 
-    // Prepare messages for OpenAI
-    const chatMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-      { role: 'system', content: systemPrompt },
+    // Prepare messages for AI
+    const chatMessages = [
+      { role: 'system' as const, content: systemPrompt },
       ...limitedMessages.map((msg) => ({
         role: msg.role as 'user' | 'assistant',
         content: msg.content,
       })),
     ]
 
-    // Call OpenAI API with timeout
+    // Call AI provider with timeout
     const completion = await Promise.race([
-      openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+      chatCompletion({
         messages: chatMessages,
         temperature: 0.7,
-        max_tokens: 1000,
+        maxTokens: 1000,
       }),
       timeoutPromise
-    ]) as OpenAI.Chat.Completions.ChatCompletion
+    ])
 
-    const assistantMessage = completion.choices[0]?.message?.content || 'Maaf, saya tidak dapat memberikan jawaban.'
+    const assistantMessage = typeof completion === 'object' && 'message' in completion
+      ? completion.message
+      : 'Maaf, saya tidak dapat memberikan jawaban.'
+    
+    const model = typeof completion === 'object' && 'model' in completion
+      ? completion.model
+      : 'unknown'
 
     return NextResponse.json({
       message: assistantMessage,
-      usage: completion.usage,
+      model: model,
     })
   } catch (error: any) {
     // Log error only in development
@@ -131,34 +131,13 @@ Prinsip menjawab:
     }
 
     // Handle specific errors
-    if (error.message === 'Request timeout') {
+    if (error.message === 'Request timeout' || error.message?.includes('timeout')) {
       return NextResponse.json(
         {
           error: 'Permintaan timeout',
           message: 'Permintaan memakan waktu terlalu lama, silakan coba lagi',
         },
         { status: 504 }
-      )
-    }
-
-    // Handle OpenAI specific errors
-    if (error.status === 401) {
-      return NextResponse.json(
-        {
-          error: 'Layanan tidak tersedia',
-          message: 'Layanan chat AI sedang tidak tersedia'
-        },
-        { status: 503 }
-      )
-    }
-
-    if (error.status === 429) {
-      return NextResponse.json(
-        {
-          error: 'Terlalu banyak permintaan',
-          message: 'Silakan coba beberapa saat lagi'
-        },
-        { status: 429 }
       )
     }
 

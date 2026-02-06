@@ -34,8 +34,15 @@ interface HealthData {
       }>
     }
     apis: {
-      vision: { status: 'ok' | 'unconfigured' }
-      openai: { status: 'ok' | 'unconfigured' }
+      ai: { 
+        status: 'ok' | 'unconfigured' | 'error'
+        details?: string
+        models?: string[]
+      }
+      ocr: { 
+        status: 'ok'
+        details: string
+      }
     }
     environment: {
       status: 'ok' | 'error'
@@ -102,8 +109,8 @@ Storage: ${healthData.checks.storage.status}
 ${healthData.checks.storage.buckets.map(b => `- ${b.name}: ${b.accessible ? 'OK' : 'ERROR'}`).join('\n')}
 
 APIs:
-- Google Vision: ${healthData.checks.apis.vision.status}
-- OpenAI: ${healthData.checks.apis.openai.status}
+- Ollama AI: ${healthData.checks.apis.ai.status}
+- Tesseract.js OCR: ${healthData.checks.apis.ocr.status}
 
 Environment:
 - Configured: ${healthData.checks.environment.configured.length}
@@ -334,19 +341,31 @@ ${healthData.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
                 <div className="p-4 border-t border-secondary-200 bg-secondary-50">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between p-2 bg-white rounded">
-                      <span className="text-sm font-medium">Google Cloud Vision (OCR)</span>
+                      <span className="text-sm font-medium">Tesseract.js (OCR)</span>
                       <div className="flex items-center gap-2">
-                        {getStatusIcon(healthData.checks.apis.vision.status)}
-                        <span className="text-xs">{healthData.checks.apis.vision.status}</span>
+                        {getStatusIcon(healthData.checks.apis.ocr.status)}
+                        <span className="text-xs">{healthData.checks.apis.ocr.status}</span>
                       </div>
                     </div>
                     <div className="flex items-center justify-between p-2 bg-white rounded">
-                      <span className="text-sm font-medium">OpenAI (AI Chat & Quiz)</span>
+                      <span className="text-sm font-medium">Ollama AI (Chat &amp; Quiz)</span>
                       <div className="flex items-center gap-2">
-                        {getStatusIcon(healthData.checks.apis.openai.status)}
-                        <span className="text-xs">{healthData.checks.apis.openai.status}</span>
+                        {getStatusIcon(healthData.checks.apis.ai.status)}
+                        <span className="text-xs">{healthData.checks.apis.ai.status}</span>
                       </div>
                     </div>
+                    {healthData.checks.apis.ai.models && healthData.checks.apis.ai.models.length > 0 && (
+                      <div className="p-2 bg-blue-50 rounded">
+                        <p className="text-xs font-semibold text-blue-900 mb-1">Available Models:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {healthData.checks.apis.ai.models.map((model) => (
+                            <span key={model} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                              {model}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
