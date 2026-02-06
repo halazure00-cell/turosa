@@ -103,22 +103,25 @@ Prinsip menjawab:
     ]
 
     // Call AI provider with timeout
-    const completion = await Promise.race([
-      chatCompletion({
-        messages: chatMessages,
-        temperature: 0.7,
-        maxTokens: 1000,
-      }),
+    const completionPromise = chatCompletion({
+      messages: chatMessages,
+      temperature: 0.7,
+      maxTokens: 1000,
+    })
+    
+    const result = await Promise.race([
+      completionPromise,
       timeoutPromise
     ])
 
-    const assistantMessage = typeof completion === 'object' && 'message' in completion
-      ? completion.message
-      : 'Maaf, saya tidak dapat memberikan jawaban.'
-    
-    const model = typeof completion === 'object' && 'model' in completion
-      ? completion.model
-      : 'unknown'
+    // Type guard and handle response
+    if (typeof result !== 'object' || result === null || !('message' in result)) {
+      throw new Error('Invalid response from AI provider')
+    }
+
+    const completion = result as { message: string; model?: string }
+    const assistantMessage = completion.message || 'Maaf, saya tidak dapat memberikan jawaban.'
+    const model = completion.model || 'unknown'
 
     return NextResponse.json({
       message: assistantMessage,
