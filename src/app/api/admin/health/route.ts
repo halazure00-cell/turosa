@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
-import { checkAIHealth } from '@/lib/ai-provider'
+import { getProviderManager } from '@/lib/ai-providers'
 import { checkOCRHealth } from '@/lib/ocr-provider'
 
 /**
@@ -28,8 +28,13 @@ interface HealthCheckResult {
     apis: {
       ai: { 
         status: 'ok' | 'unconfigured' | 'error'
+        mode?: string
+        providers?: Array<{
+          type: string
+          available: boolean
+          models?: string[]
+        }>
         details?: string
-        models?: string[]
       }
       ocr: { 
         status: 'ok'
@@ -76,6 +81,8 @@ export async function GET(request: NextRequest) {
   const envVars = {
     'NEXT_PUBLIC_SUPABASE_URL': process.env.NEXT_PUBLIC_SUPABASE_URL,
     'NEXT_PUBLIC_SUPABASE_ANON_KEY': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    'AI_PROVIDER_MODE': process.env.AI_PROVIDER_MODE,
+    'OPENROUTER_API_KEY': process.env.OPENROUTER_API_KEY,
     'AI_BASE_URL': process.env.AI_BASE_URL,
     'AI_MODEL': process.env.AI_MODEL
   }
@@ -171,21 +178,34 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Check Ollama AI
+  // Check AI providers
   try {
-    const aiHealth = await checkAIHealth()
-    if (aiHealth.available) {
+    const manager = getProviderManager()
+    const providers = await manager.checkAllProviders()
+    const anyAvailable = providers.some(p => p.available)
+    
+    if (anyAvailable) {
       result.checks.apis.ai = {
         status: 'ok',
-        details: 'Ollama server is available',
-        models: aiHealth.models
+        mode: manager.getMode(),
+        providers: providers.map(p => ({
+          type: p.provider,
+          available: p.available,
+          models: p.models
+        })),
+        details: `${providers.filter(p => p.available).length} provider(s) available`
       }
     } else {
       result.checks.apis.ai = {
         status: 'unconfigured',
-        details: aiHealth.error || 'Ollama server not available'
+        mode: manager.getMode(),
+        providers: providers.map(p => ({
+          type: p.provider,
+          available: p.available
+        })),
+        details: 'No AI providers available'
       }
-      result.recommendations.push('Start Ollama server and download a model (e.g., qwen2.5:7b) for AI chat and quiz generation')
+      result.recommendations.push('Configure OpenRouter API key (free tier) or start Ollama server for AI chat and quiz generation')
     }
   } catch (error: any) {
     result.checks.apis.ai = {

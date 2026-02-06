@@ -1,4 +1,4 @@
-# Deployment Guide - Vercel
+# Deployment Guide - Vercel with Dual AI Providers
 
 ## 🚀 Quick Deploy to Vercel
 
@@ -7,24 +7,72 @@ Before deploying, ensure you have:
 1. A Vercel account (https://vercel.com)
 2. All required API keys and credentials
 3. Your Supabase project configured
+4. (Optional) OpenRouter API key for AI features
 
 ### Required Environment Variables
 
 Set these in your Vercel project settings (Project Settings → Environment Variables):
 
-#### Supabase Configuration
+#### Supabase Configuration (Required)
 ```
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-#### Ollama AI Configuration (for AI Chat and Quiz)
+#### AI Provider Configuration (Choose One or Both)
+
+**Option 1: OpenRouter (Recommended for Vercel)**
 ```
-AI_BASE_URL=http://your-ollama-server:11434
-AI_MODEL=llama2
+AI_PROVIDER_MODE=openrouter
+OPENROUTER_API_KEY=sk-or-v1-your-api-key-here
+```
+
+**Option 2: Ollama (For Self-Hosted)**
+```
+AI_PROVIDER_MODE=ollama
+AI_BASE_URL=https://your-ollama-server:11434
+AI_MODEL=qwen2.5:7b
+```
+
+**Option 3: Hybrid/Auto (Best of Both)**
+```
+AI_PROVIDER_MODE=auto
+OPENROUTER_API_KEY=sk-or-v1-your-api-key-here
+AI_BASE_URL=https://your-ollama-server:11434  # Optional fallback
+AI_MODEL=qwen2.5:7b                            # Optional fallback
 ```
 
 **Note:** OCR functionality is built-in using Tesseract.js (no additional API keys required).
+
+### Recommended Setup for Vercel
+
+For Vercel deployments, we **strongly recommend OpenRouter** because:
+
+✅ **No server management** - Cloud-based AI  
+✅ **Completely free** - Free tier models  
+✅ **Excellent Arabic support** - Perfect for Kitab learning  
+✅ **Serverless-friendly** - Works perfectly with Vercel  
+✅ **No cold starts** - Always ready  
+✅ **Global CDN** - Fast worldwide  
+
+**Minimal Vercel Configuration:**
+```
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_key
+AI_PROVIDER_MODE=openrouter
+OPENROUTER_API_KEY=sk-or-v1-your-key
+```
+
+### Getting OpenRouter API Key (FREE)
+
+1. Visit [openrouter.ai/keys](https://openrouter.ai/keys)
+2. Sign up with GitHub, Google, or email (completely free)
+3. Click "Create Key"
+4. Copy the key (starts with `sk-or-v1-`)
+5. Add to Vercel environment variables
+6. Done! No credit card required.
+
+For detailed model information, see [docs/OPENROUTER_FREE_MODELS.md](docs/OPENROUTER_FREE_MODELS.md).
 
 ### Deployment Steps
 
@@ -43,10 +91,25 @@ AI_MODEL=llama2
 
 3. **Add Environment Variables**
    - Navigate to Project Settings → Environment Variables
-   - Add all required variables listed above
-   - **Important**: For `AI_BASE_URL`, ensure your Ollama server is accessible from Vercel
-     - Use a public URL or Vercel-accessible internal URL
-     - Default Ollama port is 11434
+   - **For OpenRouter (Recommended):**
+     ```
+     NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+     NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_key
+     AI_PROVIDER_MODE=openrouter
+     OPENROUTER_API_KEY=sk-or-v1-your-key
+     ```
+   - **For Ollama (Advanced):**
+     - Ensure your Ollama server is publicly accessible
+     - Use HTTPS for security
+     - Set up authentication/VPN
+     ```
+     AI_BASE_URL=https://your-ollama-server.com:11434
+     AI_MODEL=qwen2.5:7b
+     AI_PROVIDER_MODE=ollama
+     ```
+   - **For Hybrid Mode:**
+     - Add both OpenRouter and Ollama variables
+     - Set `AI_PROVIDER_MODE=auto` or `hybrid`
 
 4. **Deploy**
    - Click "Deploy"
