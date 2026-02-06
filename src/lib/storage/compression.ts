@@ -29,6 +29,9 @@ export async function analyzePDF(file: File): Promise<{
   message: string
 }> {
   const size = file.size
+  // Rough heuristic: assumes ~1MB per page
+  // This is a very rough estimate and may not be accurate for all PDFs
+  // More accurate estimation would require parsing the PDF
   const estimatedPages = Math.max(1, Math.floor(size / (1024 * 1024)))
   const bytesPerPage = size / estimatedPages
   

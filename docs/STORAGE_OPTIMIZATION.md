@@ -366,7 +366,7 @@ export async function POST(request: Request) {
   const file = formData.get('file') as File
   
   // Validate type
-  if (!file.type === 'application/pdf') {
+  if (file.type !== 'application/pdf') {
     return Response.json({ error: 'Invalid file type' }, { status: 400 })
   }
   
